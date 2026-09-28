@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#04030b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STAR BEES">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2304030b'/%3E%3Cpath d='M8 1v3M6 5h4v5H6zM2 9h12v2H2zM2 7h1v5H2zM13 7h1v5h-1z' stroke='%23e8322e' fill='%23f1f2f8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<title>STAR BEES</title>
+<style>
+  :root{
+    --bg:#04030b; --red:#ff4a3a; --orange:#ff8a2a; --cyan:#5ff0ff; --blue:#4d7bff; --white:#f4f4fa; --yellow:#ffd23a;
+    --muted:#8a86a8; --panel:rgba(8,6,20,.82); --line:#2c2650;
+    --fs:14px;                                   /* HUD 字級:依場地寬度在 JS 裡設定 */
+    --fl:0px; --fw:100vw; --ft:0px; --fbot:0px;  /* 場地在螢幕上的範圍(JS 投影算出來) */
+    --pix:"Press Start 2P","Courier New",monospace;
+    --cjk:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);
+    font-family:var(--pix),var(--cjk);user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none}
+  canvas#view{display:block;position:fixed;inset:0;width:100%;height:100%}
+  .hidden{display:none!important}
+  img.px{image-rendering:pixelated;image-rendering:crisp-edges}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;left:var(--fl);width:var(--fw);top:max(var(--ft),env(safe-area-inset-top));
+    display:grid;grid-template-columns:1fr 1.25fr 1fr;align-items:start;padding:calc(var(--fs)*.6) calc(var(--fs)*.7) 0;
+    font-size:var(--fs);line-height:1.35;pointer-events:none;z-index:5;text-shadow:0 0 6px rgba(0,0,0,.9)}
+  #hud .lbl{color:var(--red)}
+  #hud .c{text-align:center}
+  #hud .r{text-align:right}
+  #score{color:var(--white)}
+  #hi{color:var(--blue)}
+  .blink{animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  #hudB{position:fixed;left:var(--fl);width:var(--fw);
+    bottom:max(var(--fbot),env(safe-area-inset-bottom));
+    display:flex;justify-content:space-between;align-items:flex-end;padding:0 calc(var(--fs)*.7) calc(var(--fs)*.45);pointer-events:none;z-index:5}
+  #lives img,#badges img{height:calc(var(--fs)*1.45);margin-right:calc(var(--fs)*.25)}
+  #badges img{margin:0 0 0 calc(var(--fs)*.15)}
+  .hbtn{pointer-events:auto;font:inherit;font-size:calc(var(--fs)*.8);color:var(--white);background:rgba(20,16,44,.7);
+    border:1px solid var(--line);border-radius:6px;padding:.45em .6em;cursor:pointer;margin-left:.3em}
+  #hudBtns{display:flex;justify-content:flex-end;margin-top:.35em}
+
+  body.title #hud,body.title #hudB,body.title #msg{visibility:hidden}
+
+  /* ---------- 中央訊息 / 得分跳字 ---------- */
+  #msg{position:fixed;left:var(--fl);width:var(--fw);top:0;transform:translateY(-50%);text-align:center;
+    font-size:calc(var(--fs)*1.05);line-height:2.1;pointer-events:none;z-index:6;text-shadow:0 0 10px rgba(0,0,0,.95)}
+  .red{color:var(--red)} .cyan{color:var(--cyan)} .white{color:var(--white)} .yellow{color:var(--yellow)} .blue{color:var(--blue)}
+  .pop{position:fixed;left:0;top:0;font-size:calc(var(--fs)*.85);pointer-events:none;z-index:6;white-space:nowrap;
+    text-shadow:0 0 6px #000;will-change:transform}
+
+  /* ---------- 覆蓋畫面 ---------- */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;
+    padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    background:radial-gradient(ellipse at 50% 45%,rgba(4,3,11,.55),rgba(4,3,11,.85))}
+  .card{width:min(460px,100%);max-height:100%;overflow:auto;text-align:center;touch-action:pan-y}
+  .logo{font-size:clamp(30px,11vw,52px);line-height:1.15;letter-spacing:.04em;margin:.2em 0 .15em;
+    background:linear-gradient(#ffe35a 0%,#ff8a2a 45%,#ff3a3a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 0 #2a3aa8) drop-shadow(0 0 16px rgba(255,90,60,.35))}
+  .sub{font-family:var(--cjk);font-weight:800;font-size:16px;letter-spacing:.3em;color:var(--cyan);margin-bottom:18px}
+  .start{display:inline-block;font:inherit;font-size:18px;color:var(--white);background:none;border:0;padding:14px 18px;cursor:pointer}
+  .table{display:grid;grid-template-columns:auto auto auto;gap:10px 14px;justify-content:center;align-items:center;
+    margin:16px auto 6px;font-size:11px;color:var(--white)}
+  .table img{height:22px}
+  .table .h{font-family:var(--cjk);font-size:12px;color:var(--muted)}
+  .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 0}
+  .sbtn{font:inherit;font-size:12px;color:var(--white);background:rgba(20,16,44,.8);border:1px solid var(--line);border-radius:6px;
+    padding:9px 11px;cursor:pointer;min-width:40px}
+  .sbtn.sel{border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 0 1px var(--yellow) inset}
+  .hint{font-family:var(--cjk);font-size:13px;line-height:1.7;color:#c9c4e8;margin-top:16px}
+  .hint b{color:var(--yellow);font-weight:700}
+  .small{font-size:10px;color:var(--muted);margin-top:14px;line-height:1.8}
+  .res{font-size:13px;line-height:2.3;margin:18px 0}
+  .res span{display:inline-block;min-width:6em;text-align:right}
+
+  /* ---------- CRT 掃描線(可關) ---------- */
+  #crt{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.22;mix-blend-mode:multiply;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.9) 3px,rgba(0,0,0,0) 4px)}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div></div>
+</div>
+<div id="hudB"><div id="lives"></div><div id="badges"></div></div>
+<div id="msg"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="logo">STAR<br>BEES</div>
+    <div class="sub">星際小蜜蜂 3D</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">陣型中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="boss"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="butterfly"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="bee"><span>50</span><span>100</span>
+    </div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">CRT ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
