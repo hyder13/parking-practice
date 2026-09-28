@@ -8,7 +8,7 @@
 - 風格來源:使用者指定「善用類似 sakura-crossing 的技術」
   (https://github.com/Kenton-GMI/sakura-crossing)。toon.js / post.js 改編自它(MIT,見 THIRD_PARTY_NOTICES.md)。
   新增視覺元素一律用 `cel()` / `flat()`(src/core/toon.js),顏色一律取 `PAL`(src/core/palette.js)。
-- 不是 git repo(截至 2026-09-26)。
+- git repo(2026-09-28 init,分支 main)。尚無 remote。
 
 ## 路由(要改什麼 → 看哪裡)
 | 要改 | 檔案 / 區塊 |
