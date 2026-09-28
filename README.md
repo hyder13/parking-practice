@@ -3,6 +3,8 @@
 3D 網頁停車練習遊戲。走到車旁上車,用第一人稱(含三面後照鏡 + 倒車影像)停進黃色車格,
 下車後用俯視圖檢查成果並評分。卡通渲染風格,全部程序生成,沒有任何圖檔 / 音檔。
 
+**線上玩**:https://hyder13.github.io/parking-practice/(push 到 main 由 GitHub Actions 自動部署)
+
 ## 執行
 
 ```bash
