@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ *
- * 遊戲常數 + 五個關卡的設定。
+ * 遊戲常數 + 100 關的關卡生成。
  *
  * 座標:遊戲平面 = 世界 XY 平面(z = 0),+x 向右、+y 向上(畫面上方),
  * z 朝向鏡頭。場地 x ∈ ±FW/2、y ∈ ±FH/2,比例接近原作直立街機 (7:9.5)。
@@ -62,7 +62,13 @@ const W = {
 };
 const wave = (base, path, s, pair = false) => ({ ...W[base], path, s, pair });
 
-/*
+export const MAX_STAGE = 100;
+
+/* ---------------- 100 關程序生成 ----------------
+ * t = 0..1 難度進度(第 1 關 0、第 100 關 1)。前期很快結束(2 波 16 隻 + 小 BOSS),
+ * 之後波數增加到 5 波 40 隻,第 12 關起還有「增援」:陣型剩不多時再補滿一輪,關卡越後面越長。
+ * 每 5 關的第 3 關(3, 8, 13 …)是獎勵關,最後出現不會攻擊的黃金飛碟。
+ *
  * 難度參數
  *   enterSpeed  進場速度(單位 / 秒)     enterFire  進場時開火的機率(每隻)
  *   diveEvery   平均幾秒派一隻出擊        maxDivers  同時最多幾隻在俯衝
@@ -70,60 +76,53 @@ const wave = (base, path, s, pair = false) => ({ ...W[base], path, s, pair });
  *   bulletSpeed 敵彈速度                  beamChance 王出擊時放牽引光束的機率
  *   escort      王出擊時帶護衛的機率      beeLoop    蜂俯衝後在下方繞圈回頭的機率
  *   diveFrom    開始第 diveFrom+1 波進場時就開始俯衝(5 = 等全部進場完)
+ *   reinforce   增援輪數                  boss       BOSS 種類 / 血量
  */
-export const STAGES = [
-  {
-    name: 'STAGE 1', kind: 'normal',
-    waves: [wave('w0', 'top', 0, true), wave('w1', 'side', 1), wave('w2', 'side', -1), wave('w3', 'diag', 1), wave('w4', 'diag', -1)],
-    enterSpeed: 13, enterFire: 0, diveEvery: 2.8, maxDivers: 2, diveSpeed: 10.5, shots: 1, bulletSpeed: 11,
-    beamChance: 0.4, escort: 0.35, beeLoop: 0.2, diveFrom: 5,
-  },
-  {
-    name: 'STAGE 2', kind: 'normal',
-    waves: [wave('w0', 'topLoop', 0, true), wave('w1', 'sideHigh', 1), wave('w2', 'sideHigh', -1), wave('w3', 'diag', 1), wave('w4', 'diag', -1)],
-    enterSpeed: 14, enterFire: 0.12, diveEvery: 2.1, maxDivers: 3, diveSpeed: 12, shots: 2, bulletSpeed: 12.5,
-    beamChance: 0.45, escort: 0.5, beeLoop: 0.35, diveFrom: 5,
-  },
-  {
-    name: 'CHALLENGING STAGE', kind: 'challenge',
-    // 獎勵關:敵人不開火也不俯衝,只照花式軌跡飛過,打中幾隻算幾隻
-    waves: [
-      { path: 'c1', s: 0, pair: true, types: ['bee', 'bee', 'bee', 'bee', 'bee', 'bee', 'bee', 'bee'] },
-      { path: 'c2', s: 1, types: ['bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly'] },
-      { path: 'c2', s: -1, types: ['boss', 'bfly', 'boss', 'bfly', 'boss', 'bfly', 'boss', 'bfly'] },
-      { path: 'c3', s: 1, types: ['bee', 'bee', 'bee', 'bee', 'bee', 'bee', 'bee', 'bee'] },
-      { path: 'c3', s: -1, types: ['bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly', 'bfly'] },
-    ],
-    enterSpeed: 15,
-  },
-  {
-    name: 'STAGE 4', kind: 'normal',
-    waves: [wave('w0', 'topLoop', 0, true), wave('w1', 'side', 1), wave('w2', 'side', -1), wave('w3', 'spiral', 0, true), wave('w4', 'spiral', 0, true)],
-    enterSpeed: 15, enterFire: 0.25, diveEvery: 1.6, maxDivers: 4, diveSpeed: 13.5, shots: 2, bulletSpeed: 14,
-    beamChance: 0.5, escort: 0.6, beeLoop: 0.5, diveFrom: 4,
-  },
-  {
-    name: 'STAGE 5', kind: 'normal',
-    waves: [wave('w0', 'zig', 0, true), wave('w1', 'sideHigh', 1), wave('w2', 'sideHigh', -1), wave('w3', 'spiral', 0, true), wave('w4', 'zig', 0, true)],
-    enterSpeed: 16, enterFire: 0.35, diveEvery: 1.15, maxDivers: 5, diveSpeed: 15, shots: 3, bulletSpeed: 15.5,
-    beamChance: 0.55, escort: 0.7, beeLoop: 0.6, diveFrom: 3,
-  },
-];
+const lerpT = (a, b, t) => a + (b - a) * t;
+function rng(seed) { // mulberry32:每關固定的亂數,同一關每次玩都一樣
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+export const BOSS_KINDS = ['queen', 'moth', 'ufo'];
+export const isChallenge = (n) => n % 5 === 3;
 
-/** 第 n 關(1 起算)的設定:五關一輪,之後循環並逐輪加速。 */
 export function stageCfg(n) {
-  const base = STAGES[(n - 1) % STAGES.length];
-  const loop = Math.floor((n - 1) / STAGES.length);
-  if (!loop) return { ...base, n, loop };
-  const k = 1 + 0.1 * loop;
+  const t = Math.min(1, (n - 1) / (MAX_STAGE - 1));
+  const r = rng(n * 7919 + 13);
+  const pick = (a) => a[Math.floor(r() * a.length)];
+  if (isChallenge(n)) {
+    const nw = n < 10 ? 3 : n < 30 ? 4 : 5;
+    const types = [['bee'], ['bfly'], ['boss', 'bfly'], ['bee', 'bfly']];
+    const waves = [];
+    for (let i = 0; i < nw; i++) {
+      const tp = pick(types);
+      const w = { path: i === 0 ? 'c1' : pick(['c2', 'c3']), s: i === 0 ? 0 : (i % 2 ? 1 : -1), pair: i === 0, types: [] };
+      for (let k = 0; k < 8; k++) w.types.push(tp[k % tp.length]);
+      waves.push(w);
+    }
+    return {
+      n, t, kind: 'challenge', name: 'CHALLENGING STAGE', waves, enterSpeed: lerpT(14, 19, t), reinforce: 0,
+      boss: { kind: 'gold', hp: Math.round(18 + n * 1.5) },
+    };
+  }
+  const nw = n <= 2 ? 2 : n <= 6 ? 3 : n <= 10 ? 4 : 5;
+  const early = n < 4;
+  const order = ['w0', 'w1', 'w2', 'w3', 'w4'];
+  const waves = order.slice(0, nw).map((base, i) => {
+    if (i === 0) return wave(base, early ? 'top' : pick(['top', 'topLoop', 'zig']), 0, true);
+    if (i <= 2) return wave(base, early ? 'side' : pick(['side', 'sideHigh', 'diag']), i % 2 ? 1 : -1);
+    const p = pick(['diag', 'spiral', 'zig']);
+    return p === 'diag' ? wave(base, p, i % 2 ? 1 : -1) : wave(base, p, 0, true);
+  });
+  const bk = BOSS_KINDS[(n - 1) % BOSS_KINDS.length];
   return {
-    ...base, n, loop,
-    enterSpeed: base.enterSpeed * k,
-    diveSpeed: base.diveSpeed && base.diveSpeed * k,
-    bulletSpeed: base.bulletSpeed && base.bulletSpeed * k,
-    diveEvery: base.diveEvery && base.diveEvery / (1 + 0.25 * loop),
-    maxDivers: base.maxDivers && base.maxDivers + loop,
-    enterFire: base.enterFire !== undefined ? Math.min(0.7, base.enterFire + 0.15 * loop) : undefined,
-    diveFrom: base.diveFrom && Math.max(2, base.diveFrom - loop),
+    n, t, kind: 'normal', name: `STAGE ${n}`, waves,
+    enterSpeed: lerpT(12.5, 19, t), enterFire: n < 3 ? 0 : lerpT(0.08, 0.5, t),
+    diveEvery: lerpT(3.0, 0.8, Math.sqrt(t)), maxDivers: Math.round(lerpT(n < 3 ? 1 : 2, 7, t)),
+    diveSpeed: lerpT(9.5, 17, t), shots: Math.round(lerpT(1, 4, t)), bulletSpeed: lerpT(10, 18, t),
+    beamChance: n < 3 ? 0.15 : lerpT(0.3, 0.6, t), escort: lerpT(0.2, 0.8, t), beeLoop: lerpT(0.1, 0.7, t),
+    diveFrom: n < 6 ? 5 : n < 30 ? 4 : n < 60 ? 3 : 2,
+    reinforce: n < 12 ? 0 : 1 + Math.floor((n - 12) / 22),
+    boss: { kind: bk, hp: Math.round(14 + 7 * (n - 1) + 0.22 * (n - 1) ** 2) },
   };
 }

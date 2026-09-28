@@ -14,7 +14,10 @@
 ## 路由
 | 要改 | 位置 |
 |---|---|
-| 關卡難度 / 波次 / 分數 | src/game/config.js `STAGES` / `SCORE` |
+| 100 關生成(波數、增援、難度曲線、BOSS 血量) | src/game/config.js `stageCfg` |
+| 關底 BOSS(模型在 models.js `bigTemplate`) | src/game/boss.js |
+| 火力 / 道具 / 進化 / 連擊 / 成就 / 評星 | src/game/game.js `PATTERNS`、`EVO_XP`、`maybeDrop`、`onKill`、`startClear`、`ACH` |
+| 10 段戰機外型 | src/game/models.js `SHIP_LV` / `shipBody` |
 | 進場 / 俯衝軌跡 | src/game/paths.js `ENTRY`、`dive*` |
 | 遊戲規則(狀態機、光束、救援、碰撞) | src/game/game.js |
 | 角色模型 | src/game/models.js |
@@ -33,3 +36,8 @@
   `__game.game` 可直接呼叫 `launch(e)`、`hitEnemy(e)`。
 - 2026-09-28 驗證:Playwright + Chromium(390x844 / 360x640 / 844x390 / 1280x720)五關全部跑完無 console error;
   光束捕獲 → 救回 → 雙機流程正常;獎勵關結算、第 5 關後循環正常。
+- 2026-09-28 升級版驗證:bot 從第 1 / 21 / 51 / 91 / 99 關開始連打無 error;流程 play → warn → boss → clear 正常,
+  第 100 → 101 關正常。BOSS 戰(無敵 bot 全火力)約:第 1 關 5 秒、21 關 10~20 秒、51 關 13~21 秒、100 關 ~50 秒。
+  不會閃躲的 bot 不開無敵也能打到第 15 關 → 前期很寬鬆是刻意的(小勝利),要調難度看 `stageCfg` 的 lerpT 參數。
+- 子彈用 InstancedMesh(models.js `Batch`),整批 2 個 draw call;不要改回一顆一個 mesh。
+- BOSS 受擊閃白有節流(boss.js `hit`,每 0.2 秒最多一次),不然連射時整隻都是白的。

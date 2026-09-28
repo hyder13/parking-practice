@@ -3,10 +3,11 @@ import { PAL } from './core/palette.js';
 import { Pipeline } from './core/post.js';
 import { initAudio, setMuted, isMuted, sfx } from './core/audio.js';
 import { spriteURL } from './core/pixel.js';
-import { FW, FH, PLAYER_Y, setFieldHeight } from './game/config.js';
+import { FW, FH, PLAYER_Y, ROW0, setFieldHeight } from './game/config.js';
 import { Space } from './game/space.js';
 import { FX } from './game/fx.js';
 import { Game } from './game/game.js';
+import { spawnModel } from './game/models.js';
 
 const $ = (id) => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -78,8 +79,14 @@ function fitCamera() {
   root.setProperty('--fbot', `${Math.max(0, innerHeight - bly)}px`);
   root.setProperty('--fs', `${Math.max(8, Math.min(20, Math.round(w / 25)))}px`);
   const bottom = $('hudB').style; bottom.left = `${blx}px`; bottom.width = `${brx - blx}px`;
-  const [, cy] = project(0, 0.8);
-  $('msg').style.top = `${cy}px`;
+  // 陣型下緣 ~ 戰機活動區上緣之間:由上到下放 通知 / 誇獎 / 中央訊息,彼此不重疊
+  const bandTop = ROW0 - 6, bandBot = game.yMax, mid = (bandTop + bandBot) / 2;
+  $('toasts').style.top = `${project(0, bandTop - 1.2)[1]}px`;
+  $('praise').style.top = `${project(0, mid + 3.5)[1]}px`;
+  $('msg').style.top = `${project(0, mid - 1.4)[1]}px`;
+  // 連擊數字貼在場地右側
+  const [cx, cyy] = project(FW / 2 - 0.8, 1.5);
+  $('combo').style.left = `${cx}px`; $('combo').style.top = `${cyy}px`;
   const [p0] = project(0, PLAYER_Y), [p1] = project(1, PLAYER_Y);
   view.upp = 1 / Math.max(1, p1 - p0);
   space.fit(camera, view.dist, TILT, LOOK_Y, pipeline.scale || 1);
@@ -93,6 +100,7 @@ function showMsg(lines, dur = 2) {
 }
 const pops = [];
 function popup(x, y, text, color) {
+  if (pops.length > 24) pops.shift().el.remove();
   const el = document.createElement('div');
   el.className = `pop ${color}`; el.textContent = text;
   document.body.appendChild(el);
@@ -118,12 +126,68 @@ function hud({ score, hi, lives, stage }) {
     hudCache.lives = lives;
   }
   if (hudCache.stage !== stage) {
-    const five = Math.floor(stage / 5), one = stage % 5;
-    $('badges').innerHTML = `<img class="px" src="${spriteURL('badge5')}" alt="">`.repeat(five)
-      + `<img class="px" src="${spriteURL('flag')}" alt="">`.repeat(one);
+    // 關卡徽章:50 / 10 / 5 / 1(原作的旗子,100 關最多 10 個圖示)
+    let n = stage, html = '';
+    for (const [v, name] of [[50, 'badge50'], [10, 'badge10'], [5, 'badge5'], [1, 'flag']]) {
+      html += `<img class="px" src="${spriteURL(name)}" alt="">`.repeat(Math.floor(n / v)); n %= v;
+    }
+    $('badges').innerHTML = html;
+    $('stageNo').textContent = stage ? `STAGE ${stage}` : '';
     hudCache.stage = stage;
   }
 }
+
+/* ---------- 戰機狀態:進化經驗條 + 火力格 ---------- */
+function status({ evo, name, frac, w, maxW, rapid, shield }) {
+  $('evoName').textContent = `Lv.${evo} ${name}`;
+  $('xpFill').style.width = `${Math.round(frac * 100)}%`;
+  $('pwr').innerHTML = Array.from({ length: maxW }, (_, i) => `<i class="${i < w ? 'on' : ''}"></i>`).join('')
+    + (rapid ? '<b class="cyan">R</b>' : '') + (shield ? '<b class="green">S</b>' : '');
+}
+
+/* ---------- 連擊 / 誇獎 / 通知 / BOSS 血條 / 閃光 ---------- */
+function combo(n) {
+  const el = $('combo');
+  if (n < 2) { el.classList.remove('on'); return; }
+  el.innerHTML = `<b>${n}</b><span>COMBO</span>`;
+  el.classList.add('on');
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  el.classList.toggle('hot', n >= 20);
+}
+function praise(text, color, big) {
+  const el = $('praise');
+  el.className = `${color}${big ? ' big' : ''}`; el.textContent = text;
+  void el.offsetWidth; el.classList.add('show');
+}
+function toast(title, sub, color = 'white') {
+  const box = $('toasts');
+  const el = document.createElement('div');
+  el.className = `toast ${color}`;
+  el.innerHTML = `<b>${title}</b>${sub ? `<span>${sub}</span>` : ''}`;
+  box.appendChild(el);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(() => el.remove(), 2600);
+}
+function bossBar(name, frac, gold) {
+  const el = $('bossBar');
+  if (!name) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden'); el.classList.toggle('gold', !!gold);
+  $('bossName').textContent = name;
+  $('bossFill').style.width = `${Math.max(0, frac * 100).toFixed(1)}%`;
+}
+function flash(k = 1) {
+  const el = $('flash');
+  el.style.transition = 'none'; el.style.opacity = String(0.5 * k); // 不要整片刷白(也顧及光敏感)
+  void el.offsetWidth; el.style.transition = 'opacity .6s ease-out'; el.style.opacity = '0';
+}
+const achSet = new Set((store.get('ach', '') || '').split(',').filter(Boolean));
+function achieve(id, label) {
+  achSet.add(id); store.set('ach', [...achSet].join(','));
+  toast('ACHIEVEMENT', label, 'yellow');
+  sfx.achieve();
+}
+let best = +store.get('best', 1) || 1;
+function progress(n) { if (n > best) { best = Math.min(n, 100); store.set('best', best); renderCheckpoints(); } }
 
 /* ================= 換關的「曲速」 ================= */
 let warpT = 0, warpDur = 1;
@@ -135,7 +199,8 @@ const game = new Game(scene, {
   saveHi: (v) => store.set('hi', v),
   msg: showMsg,
   popup,
-  sfx: (n) => sfx[n] && sfx[n](),
+  sfx: (n, a) => sfx[n] && sfx[n](a),
+  loadAch: () => [...achSet], achieve, progress, status, combo, praise, toast, bossBar, flash,
   explode: (x, y, c, o) => fx.explode(x, y, c, o),
   setBeam: (...a) => fx.setBeam(...a),
   shake: (a) => { view.shake = Math.max(view.shake, a); },
@@ -145,6 +210,10 @@ const game = new Game(scene, {
   warp,
   gameOver: (stats, score) => {
     $('rScore').textContent = score;
+    $('rStage').textContent = stats.stage;
+    $('rEvo').textContent = `Lv.${stats.evo}`;
+    $('rCombo').textContent = stats.maxCombo;
+    $('rKills').textContent = stats.kills;
     $('rShots').textContent = stats.shots;
     $('rHits').textContent = stats.hits;
     $('rRatio').textContent = `${stats.shots ? (stats.hits / stats.shots * 100).toFixed(1) : '0.0'} %`;
@@ -156,13 +225,18 @@ game.pushHUD();
 /* ================= 標題 / 暫停 / 結算 ================= */
 document.body.classList.add('title'); // 標題畫面時隱藏 HUD(artifact 版沒有自己的 <body> 標籤)
 let selStage = 1, paused = false;
+function renderCheckpoints() {
+  // 檢查點:每 10 關一個,打到過的才解鎖(測試版全部開放,鎖住的顯示暗色)
+  const cps = Array.from({ length: 10 }, (_, i) => i * 10 + 1);
+  $('stageSel').innerHTML = cps.map((n) => `<button class="sbtn${n === selStage ? ' sel' : ''}${n > best ? ' locked' : ''}" data-s="${n}">${n}</button>`).join('');
+  $('bestStage').textContent = best;
+}
 $('sBee').src = spriteURL('bee'); $('sBfly').src = spriteURL('bfly'); $('sBoss').src = spriteURL('boss');
 $('hint').innerHTML = IS_TOUCH
-  ? '手指<b>左右拖曳</b>移動 · <b>按著</b>自動連射<br>被光束抓走的戰機,打下帶著它的王就能救回 → <b>雙機</b>'
-  : '<b>← →</b> / <b>A D</b> 移動 · <b>SPACE</b> 射擊 · <b>P</b> 暫停<br>被光束抓走的戰機,打下帶著它的王就能救回 → <b>雙機</b>';
+  ? '手指<b>拖曳</b>上下左右移動 · <b>按著</b>自動連射'
+  : '<b>方向鍵 / WASD</b> 移動 · <b>SPACE</b> 射擊 · <b>P</b> 暫停';
 const sel = $('stageSel');
-sel.innerHTML = '<span class="small" style="margin:0;align-self:center">STAGE</span>' + [1, 2, 3, 4, 5]
-  .map((n) => `<button class="sbtn${n === 1 ? ' sel' : ''}" data-s="${n}">${n === 3 ? '3★' : n}</button>`).join('');
+renderCheckpoints();
 sel.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   selStage = +b.dataset.s;
@@ -199,7 +273,7 @@ const inGame = () => !['title', 'ended'].includes(game.phase);
 function setPause(p) {
   if (p && !inGame()) return;
   paused = p; $('pause').classList.toggle('hidden', !p);
-  game.input.fire = false; game.input.move = 0;
+  game.input.fire = false; game.input.move = 0; game.input.moveY = 0;
 }
 $('btnPause').addEventListener('click', (e) => { e.stopPropagation(); setPause(!paused); });
 $('btnResume').addEventListener('click', () => setPause(false));
@@ -208,9 +282,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && inG
 
 /* ================= input ================= */
 const keys = {};
-const LEFT = ['ArrowLeft', 'KeyA'], RIGHT = ['ArrowRight', 'KeyD'], FIRE = ['Space', 'KeyZ', 'KeyJ', 'KeyK', 'ArrowUp'];
+const LEFT = ['ArrowLeft', 'KeyA'], RIGHT = ['ArrowRight', 'KeyD'], UP = ['ArrowUp', 'KeyW'], DOWN = ['ArrowDown', 'KeyS'];
+const FIRE = ['Space', 'KeyZ', 'KeyJ', 'KeyK'];
+const MOVE_KEYS = [...LEFT, ...RIGHT, ...UP, ...DOWN];
 function syncKeys() {
-  game.input.move = (RIGHT.some((k) => keys[k]) ? 1 : 0) - (LEFT.some((k) => keys[k]) ? 1 : 0);
+  const any = (a) => a.some((k) => keys[k]);
+  game.input.move = (any(RIGHT) ? 1 : 0) - (any(LEFT) ? 1 : 0);
+  game.input.moveY = (any(UP) ? 1 : 0) - (any(DOWN) ? 1 : 0);
   if (!touchId) game.input.fire = FIRE.some((k) => keys[k]);
 }
 addEventListener('keydown', (e) => {
@@ -220,27 +298,28 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyM') { toggleMute(); return; }
   if ((e.code === 'Enter' || e.code === 'Space') && !$('title').classList.contains('hidden')) { e.preventDefault(); startGame(); return; }
   if ((e.code === 'Enter' || e.code === 'Space') && !$('over').classList.contains('hidden')) { e.preventDefault(); $('btnAgain').click(); return; }
-  if (FIRE.includes(e.code) || LEFT.includes(e.code) || RIGHT.includes(e.code)) e.preventDefault();
+  if (FIRE.includes(e.code) || MOVE_KEYS.includes(e.code)) e.preventDefault();
   syncKeys();
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; syncKeys(); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; syncKeys(); });
 
-// 觸控:整個畫面都是操作區。拖曳 = 相對移動(手指不會擋住戰機),按著 = 自動連射
+// 觸控:整個畫面都是操作區。拖曳 = 相對移動(上下左右,手指不會擋住戰機),按著 = 自動連射
 const SENS = 1.25;
-let touchId = null, lastX = 0;
+let touchId = null, lastX = 0, lastY = 0;
 const cvs = renderer.domElement;
 cvs.addEventListener('pointerdown', (e) => {
   initAudio();
   if (touchId !== null || paused || !inGame()) return;
-  touchId = e.pointerId; lastX = e.clientX;
+  touchId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
   try { cvs.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ }
   game.input.fire = true;
 });
 cvs.addEventListener('pointermove', (e) => {
   if (e.pointerId !== touchId) return;
   game.input.drag += (e.clientX - lastX) * view.upp * SENS;
-  lastX = e.clientX;
+  game.input.dragY -= (e.clientY - lastY) * view.upp * SENS;
+  lastX = e.clientX; lastY = e.clientY;
 });
 const endTouch = (e) => { if (e.pointerId !== touchId) return; touchId = null; game.input.fire = false; syncKeys(); };
 cvs.addEventListener('pointerup', endTouch);
@@ -255,8 +334,9 @@ function loop(now) {
 }
 function tick(dt, draw = true) {
   if (!paused) {
-    game.update(dt);
-    fx.update(dt);
+    const k = game.timeScale; // BOSS 爆炸 / 進化時的慢動作
+    game.update(dt * k, dt);
+    fx.update(dt * k);
     if (warpT > 0) warpT = Math.max(0, warpT - dt);
     space.speed = 1 + 13 * Math.sin(Math.PI * (1 - warpT / warpDur)) * (warpT > 0 ? 1 : 0);
     space.update(dt);
@@ -288,7 +368,7 @@ requestAnimationFrame(loop);
 
 // 除錯 / 自動測試用(分頁隱藏時 rAF 會停,用 step 手動推進)
 window.__game = {
-  game, fx, space, camera, keys,
+  game, fx, space, camera, keys, scene, spawn: spawnModel,
   step(sec, dt = 1 / 60, draw = false) { for (let t = 0; t < sec; t += dt) tick(dt, false); if (draw) tick(0, true); },
   start: (n = 1) => { selStage = n; startGame(); },
 };

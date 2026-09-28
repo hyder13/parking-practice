@@ -48,6 +48,14 @@ function noise({ at = 0, dur = 0.2, vol = 0.2, f0 = 2000, f1 = 300, q = 0.8 }) {
 }
 
 const hz = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI → Hz
+const lastT = {};
+/** 同一種音效太密時略過(BOSS 被連續打中不會變成噪音) */
+function throttle(k, gap) {
+  if (!ctx) return false;
+  const t = ctx.currentTime;
+  if (lastT[k] && t - lastT[k] < gap) return false;
+  lastT[k] = t; return true;
+}
 
 /** notes: [[midi|null, 拍數], ...];bpm 以八分音符計 */
 function melody(notes, { bpm = 300, type = 'square', vol = 0.06, at = 0, gate = 0.85 } = {}) {
@@ -61,10 +69,44 @@ function melody(notes, { bpm = 300, type = 'square', vol = 0.06, at = 0, gate = 
 }
 
 export const sfx = {
-  shot() { tone({ f0: 1500, f1: 380, dur: 0.075, vol: 0.045 }); },
-  hit() {
+  shot() { throttle('sh', 0.07) && tone({ f0: 1500, f1: 380, dur: 0.075, vol: 0.04 }); },
+  /** combo 越高音越高(連擊的爽感),最多往上一個八度半 */
+  hit(combo = 1) {
+    const k = Math.pow(2, Math.min(combo - 1, 18) / 12);
     noise({ dur: 0.16, vol: 0.22, f0: 3800, f1: 400 });
-    tone({ f0: 700, f1: 110, dur: 0.12, vol: 0.05 });
+    tone({ f0: 700 * k, f1: 110 * k, dur: 0.12, vol: 0.05 });
+    if (combo >= 3) tone({ type: 'triangle', f0: 880 * k, at: 0.03, dur: 0.07, vol: 0.05 });
+  },
+  bossShot() { throttle('bs', 0.06) && tone({ type: 'square', f0: 260, f1: 120, dur: 0.1, vol: 0.035 }); },
+  bossTick() { throttle('bt', 0.05) && tone({ type: 'square', f0: 1800, f1: 1400, dur: 0.03, vol: 0.02 }); },
+  bossDie() {
+    noise({ dur: 1.4, vol: 0.45, f0: 3000, f1: 50, q: 1.5 });
+    tone({ type: 'triangle', f0: 400, f1: 30, dur: 1.2, vol: 0.2 });
+    melody([[72, 1], [76, 1], [79, 1], [84, 1], [88, 1], [91, 1], [96, 4]], { bpm: 520, vol: 0.06, at: 0.5 });
+  },
+  warning() {
+    for (let i = 0; i < 3; i++) {
+      tone({ type: 'square', f0: 440, f1: 880, at: i * 0.6, dur: 0.3, vol: 0.05 });
+      tone({ type: 'square', f0: 880, f1: 440, at: i * 0.6 + 0.3, dur: 0.3, vol: 0.05 });
+    }
+  },
+  pickup() { melody([[84, 1], [91, 1], [96, 1]], { bpm: 900, vol: 0.05 }); },
+  powerUp() { melody([[72, 1], [76, 1], [79, 1], [84, 1], [79, 1], [84, 2]], { bpm: 700, vol: 0.055, at: 0.1 }); },
+  shield() { tone({ type: 'triangle', f0: 300, f1: 1200, dur: 0.35, vol: 0.08 }); },
+  bomb() {
+    noise({ dur: 1.0, vol: 0.5, f0: 5000, f1: 60, q: 1 });
+    tone({ type: 'triangle', f0: 180, f1: 30, dur: 0.9, vol: 0.25 });
+  },
+  levelUp() {
+    melody([[67, 1], [72, 1], [76, 1], [79, 1], [84, 2], [83, 1], [84, 1], [88, 1], [91, 4]], { bpm: 560, vol: 0.06 });
+    melody([[48, 4], [55, 4], [60, 6]], { bpm: 560, type: 'triangle', vol: 0.12 });
+  },
+  praise() { throttle('pr', 0.4) && melody([[88, 1], [91, 1], [96, 2]], { bpm: 720, vol: 0.045, type: 'triangle' }); },
+  achieve() { melody([[79, 1], [84, 1], [88, 1], [91, 1], [96, 3]], { bpm: 600, vol: 0.05, type: 'triangle', at: 0.2 }); },
+  /** 過關:每顆星一個「叮」 */
+  clear(stars = 1) {
+    melody([[72, 1], [76, 1], [79, 1], [84, 3]], { bpm: 500, vol: 0.055 });
+    for (let i = 0; i < stars; i++) tone({ type: 'triangle', f0: hz(88 + i * 4), at: 0.6 + i * 0.28, dur: 0.25, vol: 0.09 });
   },
   bossHit() { tone({ f0: 330, f1: 660, dur: 0.07, vol: 0.06 }); tone({ f0: 660, f1: 990, at: 0.06, dur: 0.07, vol: 0.05 }); },
   bossKill() {
