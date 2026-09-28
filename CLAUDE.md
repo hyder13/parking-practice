@@ -11,6 +11,10 @@
 - git:公開庫 https://github.com/hyder13/parking-practice(main)。push main → `.github/workflows/deploy.yml`
   自動部署 GitHub Pages:https://hyder13.github.io/parking-practice/(`vite.config.js` base './' 不可拿掉)。
 
+## 授權邊界
+- 【使用者授權 2026-09-28】本專案 `git push` 到 origin main(= 自動部署 GitHub Pages 公開網站)不用再問;
+  push 前仍須 build 通過 + 實測。force push、改 repo 設定 / 可見度、刪分支仍要先問。
+
 ## 路由(要改什麼 → 看哪裡)
 | 要改 | 檔案 / 區塊 |
 |---|---|
