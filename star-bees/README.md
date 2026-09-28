@@ -33,10 +33,14 @@ npm run build    # → dist/
 | 進化 | 殺敵經驗累積,10 段外型:ROOKIE → SCOUT → FALCON → HAWK → RAPTOR → VALKYRIE → COMET → NOVA → SUPERNOVA → PHOENIX;射速、傷害跟著提升,死掉不會掉 |
 | 雙機 | 被 BOSS 光束抓走的戰機,打下帶著它的王就能救回 |
 
-## 小勝利(一直給玩家回饋)
-- 連擊 COMBO:1.6 秒內連續擊墜,加分、音高越來越高;5 / 10 / 20 / 35 / 50 / 75 / 100 連擊有誇獎字(NICE! … GODLIKE!)
-- 散彈同時打下多隻:TRIPLE KILL / MULTI KILL
+## 小勝利(一直給回饋,但不擋畫面中央)
+畫面中央只留流程訊息(STAGE / READY / WARNING / CLEAR),其他回饋都放在邊上:
+- **右側連擊數字**:1.6 秒內連續擊墜,音高越來越高;5 / 10 / 20 / 35 / 50 / 75 / 100 連擊時「COMBO」字樣換成 NICE! … GODLIKE!;
+  連擊結束顯示 +獎勵分數
+- **戰機頭上小標籤**:吃道具(POWER Lv.3、RAPID、SHIELD、1UP)、進化(EVOLVED!)、雙機
+- **底部狀態列**:火力格升級時閃一下、進化時 Lv 名稱與經驗條發光
+- **左上角側欄**:成就(BOSS SLAYER、COMBO x10、MAX POWER、RESCUE HERO、STAGE 10/25/50/100 …,存在瀏覽器)
+- 跳分只在大分數(400 以上)出現,跟原作一樣
 - 過關評星:★ 過關、★★ 沒死、★★★ 沒死 + 最高連擊 ≥ 8,附加分
-- 擊敗 BOSS 慢動作 + 大爆炸;進化時慢動作 + 全新外型
-- 成就(存在瀏覽器):BOSS SLAYER、COMBO x10、MAX POWER、RESCUE HERO、STAGE 10/25/50/100 …
+- 擊敗 BOSS / 進化時慢動作 + 大爆炸
 - GAME OVER 顯示到達關卡、進化等級、最高連擊、擊墜數、命中率

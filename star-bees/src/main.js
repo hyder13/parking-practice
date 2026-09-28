@@ -79,11 +79,9 @@ function fitCamera() {
   root.setProperty('--fbot', `${Math.max(0, innerHeight - bly)}px`);
   root.setProperty('--fs', `${Math.max(8, Math.min(20, Math.round(w / 25)))}px`);
   const bottom = $('hudB').style; bottom.left = `${blx}px`; bottom.width = `${brx - blx}px`;
-  // 陣型下緣 ~ 戰機活動區上緣之間:由上到下放 通知 / 誇獎 / 中央訊息,彼此不重疊
-  const bandTop = ROW0 - 6, bandBot = game.yMax, mid = (bandTop + bandBot) / 2;
-  $('toasts').style.top = `${project(0, bandTop - 1.2)[1]}px`;
-  $('praise').style.top = `${project(0, mid + 3.5)[1]}px`;
-  $('msg').style.top = `${project(0, mid - 1.4)[1]}px`;
+  // 中央訊息放在陣型下緣 ~ 戰機活動區上緣之間
+  const mid = (ROW0 - 6 + game.yMax) / 2;
+  $('msg').style.top = `${project(0, mid)[1]}px`;
   // 連擊數字貼在場地右側
   const [cx, cyy] = project(FW / 2 - 0.8, 1.5);
   $('combo').style.left = `${cx}px`; $('combo').style.top = `${cyy}px`;
@@ -99,10 +97,10 @@ function showMsg(lines, dur = 2) {
   msgT = dur;
 }
 const pops = [];
-function popup(x, y, text, color) {
+function popup(x, y, text, color, tag = false) {
   if (pops.length > 24) pops.shift().el.remove();
   const el = document.createElement('div');
-  el.className = `pop ${color}`; el.textContent = text;
+  el.className = `pop ${color}${tag ? ' tag' : ''}`; el.textContent = text;
   document.body.appendChild(el);
   pops.push({ el, x, y, t: 0 });
 }
@@ -138,36 +136,46 @@ function hud({ score, hi, lives, stage }) {
 }
 
 /* ---------- 戰機狀態:進化經驗條 + 火力格 ---------- */
+let lastW = 0;
 function status({ evo, name, frac, w, maxW, rapid, shield }) {
+  if (w > lastW && lastW) bump($('pwr'));
+  lastW = w;
   $('evoName').textContent = `Lv.${evo} ${name}`;
   $('xpFill').style.width = `${Math.round(frac * 100)}%`;
   $('pwr').innerHTML = Array.from({ length: maxW }, (_, i) => `<i class="${i < w ? 'on' : ''}"></i>`).join('')
     + (rapid ? '<b class="cyan">R</b>' : '') + (shield ? '<b class="green">S</b>' : '');
 }
 
-/* ---------- 連擊 / 誇獎 / 通知 / BOSS 血條 / 閃光 ---------- */
-function combo(n) {
+/* ---------- 連擊 / 側邊通知 / BOSS 血條 / 閃光 ----------
+ * 畫面中央只留流程訊息(STAGE / READY / WARNING / CLEAR);
+ * 連擊與誇獎集中在右側連擊數字,道具與進化是戰機頭上的小標籤,成就走左上角側欄。 */
+const bump = (el, cls = 'bump') => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+let comboHide = 0;
+function combo(n, word, color, bonus) {
   const el = $('combo');
-  if (n < 2) { el.classList.remove('on'); return; }
-  el.innerHTML = `<b>${n}</b><span>COMBO</span>`;
-  el.classList.add('on');
-  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-  el.classList.toggle('hot', n >= 20);
+  clearTimeout(comboHide);
+  el.classList.remove('mile', 'pop');
+  if (n >= 2) {
+    el.innerHTML = `<b>${n}</b><span class="${word ? color : ''}">${word || 'COMBO'}</span>`;
+    el.classList.add('on');
+    el.classList.toggle('hot', n >= 20);
+    bump(el, word ? 'mile' : 'pop');
+  } else if (bonus) {
+    // 連擊結束:數字換成獎勵分數,一秒後淡出
+    el.innerHTML = `<b class="yellow">+${bonus}</b><span>BONUS</span>`;
+    bump(el, 'pop');
+    comboHide = setTimeout(() => el.classList.remove('on'), 1100);
+  } else el.classList.remove('on');
 }
-function praise(text, color, big) {
-  const el = $('praise');
-  el.className = `${color}${big ? ' big' : ''}`; el.textContent = text;
-  void el.offsetWidth; el.classList.add('show');
-}
-function toast(title, sub, color = 'white') {
-  const box = $('toasts');
+function feed(text, color = 'white') {
+  const box = $('feed');
   const el = document.createElement('div');
-  el.className = `toast ${color}`;
-  el.innerHTML = `<b>${title}</b>${sub ? `<span>${sub}</span>` : ''}`;
+  el.className = `feed ${color}`; el.textContent = text;
   box.appendChild(el);
   while (box.children.length > 3) box.firstChild.remove();
-  setTimeout(() => el.remove(), 2600);
+  setTimeout(() => el.remove(), 3200);
 }
+function evolved() { bump($('status'), 'glow'); }
 function bossBar(name, frac, gold) {
   const el = $('bossBar');
   if (!name) { el.classList.add('hidden'); return; }
@@ -183,7 +191,7 @@ function flash(k = 1) {
 const achSet = new Set((store.get('ach', '') || '').split(',').filter(Boolean));
 function achieve(id, label) {
   achSet.add(id); store.set('ach', [...achSet].join(','));
-  toast('ACHIEVEMENT', label, 'yellow');
+  feed(`★ ${label}`, 'yellow');
   sfx.achieve();
 }
 let best = +store.get('best', 1) || 1;
@@ -200,7 +208,7 @@ const game = new Game(scene, {
   msg: showMsg,
   popup,
   sfx: (n, a) => sfx[n] && sfx[n](a),
-  loadAch: () => [...achSet], achieve, progress, status, combo, praise, toast, bossBar, flash,
+  loadAch: () => [...achSet], achieve, progress, status, combo, feed, evolved, bossBar, flash,
   explode: (x, y, c, o) => fx.explode(x, y, c, o),
   setBeam: (...a) => fx.setBeam(...a),
   shake: (a) => { view.shake = Math.max(view.shake, a); },

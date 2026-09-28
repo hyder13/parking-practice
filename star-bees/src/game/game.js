@@ -103,7 +103,6 @@ export class Game {
     this.rescue = null;    // 救回 / 逃走中的戰機
     this.clock = 0;
     this.combo = { n: 0, t: -9 };
-    this.multi = { n: 0, t: -9 };
     this.slowT = 0; this.slowK = 1;
     this.phase = 'title'; this.phaseT = 0;
     this.attract();
@@ -324,7 +323,7 @@ export class Game {
         if (this.big) {
           this.big.update(dt);
           if (this.big.done) {
-            if (this.big.escaped) { this.big.remove(); this.h.toast('ESCAPED...', 'GOLDEN SAUCER', 'white'); }
+            if (this.big.escaped) { this.big.remove(); this.h.feed('GOLDEN SAUCER ESCAPED', 'white'); }
             this.big = null; this.h.bossBar(null);
             if (this.cfg.kind === 'challenge') { this.phase = 'result'; this.phaseT = 0; this.resultStep = 0; }
             else this.startClear();
@@ -375,7 +374,6 @@ export class Game {
     const pts = gold ? 5000 + n * 100 : 2000 + 300 * n;
     this.addScore(pts);
     this.h.popup(B.x, B.y, pts, 'yellow');
-    this.h.praise(gold ? 'JACKPOT !' : 'BOSS DEFEATED !', 'yellow', true);
     // 火力還低時 BOSS 一定掉 P;之後改成隨機,火力大約第 8~10 關才會滿
     const first = this.player.w < 3 ? 'P' : Math.random() < 0.2 ? 'L' : this.randomItem();
     const drops = gold ? [first, this.randomItem()] : [first];
@@ -404,7 +402,7 @@ export class Game {
   }
 
   nextStage() {
-    if (this.stageN === MAX_STAGE) this.h.toast('ALL 100 STAGES CLEAR !', 'CONGRATULATIONS', 'yellow');
+    if (this.stageN === MAX_STAGE) this.h.feed('ALL 100 STAGES CLEAR !', 'yellow');
     this.stageN++;
     this.beginStage(false);
   }
@@ -683,17 +681,14 @@ export class Game {
     this.stats.maxCombo = Math.max(this.stats.maxCombo, C.n); this.st.maxCombo = Math.max(this.st.maxCombo, C.n);
     const bonus = Math.min(C.n - 1, 50) * 10;
     this.addScore(pts + bonus);
-    this.h.popup(e.x, e.y, pts + bonus, pts >= 800 ? 'yellow' : pts >= 400 || C.n >= 10 ? 'cyan' : 'white');
-    this.h.combo(C.n);
+    // 跳分只給大分數(原作也只有王帶護衛時才跳字),一般擊墜的分數交給右邊的連擊顯示
+    if (pts >= 400) this.h.popup(e.x, e.y, pts, pts >= 800 ? 'yellow' : 'cyan');
+    const milestone = PRAISE.find(([k]) => k === C.n);
+    this.h.combo(C.n, milestone && milestone[1], milestone && milestone[2]);
     this.h.sfx(e.type === 'boss' ? 'bossKill' : 'hit', C.n);
-    for (const [k, text, col] of PRAISE) if (C.n === k) { this.h.praise(text, col); this.h.sfx('praise'); }
+    if (milestone) this.h.sfx('praise');
     if (C.n >= 10) this.achieve('combo10');
     if (C.n >= 50) this.achieve('combo50');
-    // 同時打下好幾隻(散彈)
-    const M = this.multi;
-    M.n = this.clock - M.t < 0.18 ? M.n + 1 : 1; M.t = this.clock;
-    if (M.n === 3) this.h.praise('TRIPLE KILL !', 'yellow');
-    else if (M.n >= 4) this.h.praise(`MULTI KILL x${M.n}`, 'red');
     this.addXP(1);
     this.maybeDrop(e);
   }
@@ -701,9 +696,9 @@ export class Game {
   updateCombo() {
     const C = this.combo;
     if (C.n > 0 && this.clock - C.t > COMBO_WINDOW) {
-      if (C.n >= 8) this.h.toast(`${C.n} COMBO`, `+${C.n * 20} PTS`, 'cyan');
-      if (C.n >= 8) this.addScore(C.n * 20);
-      C.n = 0; this.h.combo(0);
+      const bonus = C.n >= 8 ? C.n * 20 : 0;
+      if (bonus) this.addScore(bonus);
+      C.n = 0; this.h.combo(0, null, null, bonus);
     }
   }
 
@@ -720,8 +715,8 @@ export class Game {
     this.setShipModels(P.evo);
     const lv = SHIP_LV[P.evo - 1];
     this.h.explode(P.x, P.y, [lv.body, lv.accent, lv.pod, 0xffffff], { big: true, n: 26 });
-    this.h.praise('EVOLUTION !', 'yellow', true);
-    this.h.toast(`Lv.${P.evo}  ${lv.name}`, P.evo % 3 === 1 ? 'POWER UP · FIRE RATE UP' : 'FIRE RATE UP', 'yellow');
+    this.tag('EVOLVED !', 'yellow');
+    this.h.evolved();
     this.h.sfx('levelUp');
     this.slow(0.45, 0.45);
     if (P.evo >= 5) this.achieve('evo5');
@@ -786,14 +781,14 @@ export class Game {
     if (kind === 'P') {
       if (P.w < MAX_POWER) {
         P.w++;
-        this.h.toast('POWER UP !', `SHOT Lv.${P.w}${P.w === MAX_POWER ? '  MAX' : ''}`, 'red');
+        this.tag(P.w === MAX_POWER ? 'POWER MAX' : `POWER Lv.${P.w}`, 'red');
         this.h.sfx('powerUp');
         if (P.w === MAX_POWER) this.achieve('power');
       } else { this.addScore(1000); this.h.popup(x, y, 1000, 'yellow'); }
-    } else if (kind === 'R') { P.rapidT = 10; this.h.toast('RAPID FIRE', '10 SEC', 'cyan'); }
-    else if (kind === 'S') { P.shieldT = 15; this.h.toast('SHIELD', '15 SEC', 'green'); this.h.sfx('shield'); }
+    } else if (kind === 'R') { P.rapidT = 10; this.tag('RAPID', 'cyan'); }
+    else if (kind === 'S') { P.shieldT = 15; this.tag('SHIELD', 'green'); this.h.sfx('shield'); }
     else if (kind === 'B') this.bomb();
-    else if (kind === 'L') { P.lives++; this.h.toast('1UP !', 'EXTRA FIGHTER', 'yellow'); this.h.sfx('extra'); this.pushHUD(); }
+    else if (kind === 'L') { P.lives++; this.tag('1UP', 'yellow'); this.h.sfx('extra'); this.pushHUD(); }
     this.pushStatus();
   }
 
@@ -807,7 +802,6 @@ export class Game {
       this.pushBoss();
       if (dead) this.h.bossBar(null);
     }
-    this.h.praise('BOMB !', 'red');
   }
 
   achieve(id) {
@@ -901,7 +895,7 @@ export class Game {
       P.dual = true;
       this.scene.remove(root); this.rescue = null;
       this.h.sfx('rescued');
-      this.h.praise('DUAL FIGHTER !', 'cyan', true);
+      this.tag('DUAL FIGHTER', 'cyan');
     }
   }
 
@@ -1108,10 +1102,16 @@ export class Game {
       this.player.lives++;
       this.nextExtra = this.nextExtra < EXTRA_LIFE[1] ? EXTRA_LIFE[1] : this.nextExtra + 70000;
       this.h.sfx('extra');
-      this.h.toast('1UP !', `${this.score} PTS`, 'yellow');
+      this.tag('1UP', 'yellow');
     }
     if (this.score > this.hi) this.hi = this.score;
     this.pushHUD();
+  }
+
+  /** 戰機頭上的小標籤(道具、進化…):不佔畫面中央 */
+  tag(text, color) {
+    const P = this.player;
+    this.h.popup(P.x + (P.dual ? DUAL_DX / 2 : 0), P.y + 1.4, text, color, true);
   }
 
   pushHUD() {

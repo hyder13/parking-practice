@@ -49,7 +49,7 @@
     border:1px solid var(--line);border-radius:6px;padding:.45em .6em;cursor:pointer;margin-left:.3em}
   #hudBtns{display:flex;justify-content:flex-end;margin-top:.35em}
 
-  body.title #hud,body.title #hudB,body.title #msg,body.title #status,body.title #bossBar,body.title #combo{visibility:hidden}
+  body.title #hud,body.title #hudB,body.title #msg,body.title #status,body.title #bossBar,body.title #combo,body.title #feed{visibility:hidden}
   #stageNo{font-size:calc(var(--fs)*.62);color:var(--muted);margin-top:.5em}
 
   /* ---------- 戰機狀態(進化經驗條 + 火力格) ---------- */
@@ -80,24 +80,31 @@
   #combo b{display:block;font-weight:400;font-size:calc(var(--fs)*1.7);color:var(--white)}
   #combo span{font-size:calc(var(--fs)*.6);color:var(--cyan)}
   #combo.hot b{color:var(--yellow)}
+  #combo span.cyan,#combo b.cyan{color:var(--cyan)} #combo span.yellow,#combo b.yellow{color:var(--yellow)} #combo span.red{color:var(--red)}
+  #combo.mile span{font-size:calc(var(--fs)*.8)}
   #combo.pop b{animation:cpop .18s ease-out}
   @keyframes cpop{from{transform:scale(1.5)}to{transform:scale(1)}}
-  #praise{position:fixed;left:var(--fl);width:var(--fw);top:0;text-align:center;pointer-events:none;z-index:7;
-    font-size:calc(var(--fs)*1.4);opacity:0;text-shadow:0 0 12px rgba(0,0,0,.9),0 3px 0 #2a3aa8}
-  #praise.big{font-size:calc(var(--fs)*1.9)}
-  #praise.show{animation:praise 1.2s ease-out forwards}
-  @keyframes praise{0%{opacity:0;transform:translateY(-50%) scale(2.2)}12%{opacity:1;transform:translateY(-50%) scale(1)}
-    75%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-90%) scale(1)}}
-  #toasts{position:fixed;left:var(--fl);width:var(--fw);top:0;transform:translateY(-50%);
-    display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:8}
-  .toast{background:rgba(10,8,28,.62);border:1px solid currentColor;border-radius:6px;padding:.55em 1em;text-align:center;
-    font-size:calc(var(--fs)*.7);animation:toast 2.6s ease-out forwards}
-  .toast b{display:block;font-weight:400}
-  .toast span{display:block;margin-top:.45em;font-size:.8em;color:var(--white)}
-  @keyframes toast{0%{opacity:0;transform:translateY(-12px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+  #combo.mile b{animation:cmile .45s ease-out}
+  #combo.mile span{display:inline-block;animation:cword 1s ease-out}
+  @keyframes cmile{0%{transform:scale(2)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+  @keyframes cword{0%{transform:scale(1.8);filter:brightness(2)}100%{transform:scale(1)}}
+  /* 左上角側欄:成就 / 少數系統通知,滑進來再滑出去 */
+  #feed{position:fixed;left:var(--fl);top:calc(max(var(--ft),env(safe-area-inset-top)) + var(--fs)*5.3);
+    padding-left:calc(var(--fs)*.7);display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;z-index:8}
+  .feed{font-size:calc(var(--fs)*.55);padding:.45em .8em .45em .6em;background:rgba(10,8,28,.6);border-left:3px solid currentColor;
+    border-radius:0 4px 4px 0;white-space:nowrap;animation:feed 3.2s ease-out forwards}
+  @keyframes feed{0%{opacity:0;transform:translateX(-24px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateX(-12px)}}
+  /* 戰機頭上的小標籤(道具 / 進化) */
+  .pop.tag{font-size:calc(var(--fs)*.62);padding:.25em .5em;background:rgba(10,8,28,.55);border-radius:3px}
+  #pwr.bump i.on{animation:pip .5s ease-out}
+  @keyframes pip{0%{transform:scaleY(1.8);filter:brightness(2.2)}100%{transform:none}}
+  #status.glow #evoName{animation:evo 1.6s ease-out}
+  #status.glow #xp{animation:evobar 1.6s ease-out}
+  @keyframes evo{0%,30%{color:#fff;text-shadow:0 0 10px #ffd23a,0 0 20px #ff8a2a}100%{text-shadow:0 0 6px #000}}
+  @keyframes evobar{0%,30%{box-shadow:0 0 12px #ffd23a;border-color:#fff}100%{box-shadow:none}}
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9}
   .stars{font-size:1.5em;letter-spacing:.2em;font-family:var(--cjk)}
-  @media (prefers-reduced-motion:reduce){#praise.show,.toast,#combo.pop b{animation-duration:.01s}}
+  @media (prefers-reduced-motion:reduce){.feed,#combo.pop b,#combo.mile b,#combo.mile span,#pwr.bump i.on,#status.glow *{animation-duration:.01s}}
 
   /* ---------- 中央訊息 / 得分跳字 ---------- */
   #msg{position:fixed;left:var(--fl);width:var(--fw);top:0;transform:translateY(-50%);text-align:center;
@@ -153,9 +160,8 @@
   <div id="status"><span id="evoName">Lv.1 ROOKIE</span><div id="pwr"></div><div id="xp"><div id="xpFill"></div></div></div>
   <div id="badges"></div></div>
 <div id="msg"></div>
-<div id="praise"></div>
 <div id="combo"></div>
-<div id="toasts"></div>
+<div id="feed"></div>
 <div id="flash"></div>
 
 <div id="title" class="overlay">

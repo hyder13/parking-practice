@@ -41,3 +41,5 @@
   不會閃躲的 bot 不開無敵也能打到第 15 關 → 前期很寬鬆是刻意的(小勝利),要調難度看 `stageCfg` 的 lerpT 參數。
 - 子彈用 InstancedMesh(models.js `Batch`),整批 2 個 draw call;不要改回一顆一個 mesh。
 - BOSS 受擊閃白有節流(boss.js `hit`,每 0.2 秒最多一次),不然連射時整隻都是白的。
+- 【使用者回饋 2026-09-28】畫面中央不要堆提示:中央只放流程訊息(`h.msg`)。回饋改用右側連擊(`h.combo`)、
+  戰機頭上小標籤(`game.tag`)、左上側欄(`h.feed`)、底部狀態列動畫(`h.evolved`)。新增提示請沿用這些位置。
