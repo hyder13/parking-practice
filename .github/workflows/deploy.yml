@@ -25,6 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # 星際小蜜蜂 3D(star-bees/ 是獨立的 Vite 專案)→ 放到 /star-bees/ 子路徑
+      - run: npm ci && npm run build
+        working-directory: star-bees
+      - run: cp -r star-bees/dist dist/star-bees
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

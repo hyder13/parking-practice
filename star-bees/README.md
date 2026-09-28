@@ -3,7 +3,7 @@
 懷舊「小蜜蜂」街機射擊的 3D 化手機版。沿用停車練習場的卡通渲染(cel 陰影 + 深度描線 + 調色),
 但保留街機的純黑太空、彩色閃爍像素星、點陣字 HUD 與點陣小圖示。全部程序生成,沒有圖檔 / 音檔。
 
-線上玩:https://hyder13.github.io/star-bees/
+線上玩:https://hyder13.github.io/parking-practice/star-bees/
 
 ## 執行
 ```

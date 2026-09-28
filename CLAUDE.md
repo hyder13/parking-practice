@@ -10,6 +10,8 @@
   新增視覺元素一律用 `cel()` / `flat()`(src/core/toon.js),顏色一律取 `PAL`(src/core/palette.js)。
 - git:公開庫 https://github.com/hyder13/parking-practice(main)。push main → `.github/workflows/deploy.yml`
   自動部署 GitHub Pages:https://hyder13.github.io/parking-practice/(`vite.config.js` base './' 不可拿掉)。
+- 同一個 repo 的 `star-bees/` 是另一款遊戲(星際小蜜蜂 3D,獨立 Vite 專案,見 star-bees/CLAUDE.md),
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/star-bees/。
 
 ## 授權邊界
 - 【使用者授權 2026-09-28】本專案 `git push` 到 origin main(= 自動部署 GitHub Pages 公開網站)不用再問;
