@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>停車練習場</title>
+<style>
+  :root{
+    --bg:#0f1318; --panel:rgba(18,22,28,.92); --line:#2a313b; --text:#e9eef4; --muted:#93a0b0;
+    --accent:#ffd23f; --ok:#3ecf8e; --warn:#ffb020; --bad:#ff5a5a; --blue:#4da3ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+    font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif}
+  canvas#view{display:block;position:fixed;inset:0;width:100%;height:100%}
+  .legend{margin-top:8px;font-size:12px;color:#cfd8e2}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin:0 4px 0 8px}
+  .muted{margin-top:6px;color:var(--muted);font-size:12px}
+  .hidden{display:none!important}
+  .off{visibility:hidden}
+  kbd{display:inline-block;min-width:22px;padding:1px 6px;border:1px solid #4a5563;border-bottom-width:3px;
+    border-radius:5px;background:#1c222b;font:12px/1.5 Consolas,monospace;text-align:center;color:#fff}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(8,10,14,.62);backdrop-filter:blur(3px);z-index:20;padding:16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 26px;
+    width:min(880px,100%);max-height:100%;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .panel h1{margin:0 0 4px;font-size:26px}
+  .panel .sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .panel h3{margin:16px 0 8px;font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.05em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .opt{border:1px solid var(--line);background:#161b22;color:var(--text);border-radius:10px;
+    padding:9px 10px;cursor:pointer;text-align:left;font:inherit;transition:.12s}
+  .opt:hover{border-color:#566273}
+  .opt.sel{border-color:var(--accent);background:#2a2610;box-shadow:0 0 0 1px var(--accent) inset}
+  .opt b{display:block;font-size:15px}
+  .opt small{color:var(--muted);font-size:12px}
+  .opt .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+  .actions{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap}
+  .btn{border:0;border-radius:10px;padding:11px 22px;font:600 15px inherit;font-family:inherit;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#1a1a1a}
+  .btn.ghost{background:#222a34;color:var(--text)}
+  .best{color:var(--muted);font-size:13px}
+  .keys{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-top:16px;font-size:13px;color:#c9d3de}
+  .keys div{padding:3px 0;border-bottom:1px dashed #262d36}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+  #topbar{position:absolute;top:10px;left:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:7px 12px;font-size:13px;display:flex;gap:14px;align-items:center}
+  #topbar .t{font-variant-numeric:tabular-nums}
+  #hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:#cfd8e2;background:rgba(0,0,0,.45);
+    padding:6px 10px;border-radius:8px;max-width:calc(100% - 24px)}
+  #prompt{position:absolute;left:50%;top:58%;transform:translateX(-50%);background:rgba(0,0,0,.6);
+    padding:8px 16px;border-radius:10px;font-size:16px}
+  #toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:10px 22px;border-radius:12px;
+    font-size:20px;font-weight:700;background:rgba(0,0,0,.7);transition:opacity .25s;opacity:0}
+  #toast.bad{background:rgba(190,30,30,.85)}
+  #lockhint{position:absolute;right:12px;top:10px;font-size:12px;color:#fff;background:rgba(0,0,0,.5);
+    padding:6px 10px;border-radius:8px}
+  #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;
+    background:rgba(255,255,255,.8);box-shadow:0 0 0 2px rgba(0,0,0,.3)}
+  #dash{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:stretch}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:74px;text-align:center}
+  .card .lbl{font-size:11px;color:var(--muted)}
+  .card .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+  #gear span{opacity:.3;margin:0 2px}
+  #gear span.on{opacity:1;color:var(--accent)}
+  #radar .bar{height:8px;border-radius:4px;background:#2a313b;margin:4px 0 2px;overflow:hidden;width:110px}
+  #radar .bar i{display:block;height:100%;width:0;background:var(--ok)}
+  #radar .rv{font-size:12px;font-variant-numeric:tabular-nums;text-align:left}
+  #steerIcon{width:40px;height:40px;display:block;margin:2px auto 0}
+
+  .mirror{position:absolute;border:4px solid #0b0b0c;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.5);overflow:hidden}
+  .mirror span{position:absolute;left:6px;top:3px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000;opacity:.8}
+  #mRear{top:10px;left:50%;width:340px;height:86px;margin-left:-170px;border-radius:14px}
+  #mLeft{left:14px;bottom:128px;width:230px;height:130px;border-radius:18px 10px 10px 30px}
+  #mRight{right:14px;bottom:128px;width:230px;height:130px;border-radius:10px 18px 30px 10px}
+  #mBack{left:50%;bottom:104px;width:420px;height:236px;margin-left:-210px;border-color:#111}
+  #mBack svg{position:absolute;inset:0;width:100%;height:100%}
+
+  #evalPanel{position:absolute;right:12px;top:56px;width:280px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;font-size:13px}
+  #evalPanel h4{margin:0 0 8px;font-size:14px}
+  .kv{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #262d36}
+  .kv b{font-variant-numeric:tabular-nums}
+  .g{color:var(--ok)} .y{color:var(--warn)} .r{color:var(--bad)}
+
+  #result .panel{width:min(460px,100%);text-align:center}
+  #gradeBig{font-size:72px;font-weight:800;line-height:1;margin:8px 0 2px}
+  #scoreBig{font-size:18px;color:var(--muted);margin-bottom:12px}
+  #resultList{text-align:left;font-size:14px}
+  #resultNotes{text-align:left;font-size:13px;color:#cfd8e2;margin-top:10px;padding-left:18px}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud">
+  <div id="topbar"><span id="tbScen"></span><span class="t" id="tbTime">00:00.0</span><span id="tbCol"></span><span id="tbShift"></span></div>
+  <div id="lockhint" class="hidden">點一下畫面 = 用滑鼠轉視角(Esc 釋放)</div>
+  <div id="cross" class="hidden"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="toast"></div>
+
+  <div class="mirror off" id="mRear"><span>車內後視鏡</span></div>
+  <div class="mirror off" id="mLeft"><span>左後照鏡</span></div>
+  <div class="mirror off" id="mRight"><span>右後照鏡</span></div>
+  <div class="mirror off" id="mBack"><span>倒車影像</span><svg id="bcSvg" viewBox="0 0 420 236" preserveAspectRatio="none"></svg></div>
+
+  <div id="dash" class="hidden">
+    <div class="card"><div class="lbl">檔位</div><div class="big" id="gear"><span>P</span><span>R</span><span>D</span></div></div>
+    <div class="card"><div class="lbl">km/h</div><div class="big" id="spd">0</div></div>
+    <div class="card"><div class="lbl">方向盤 <span id="acTag"></span></div>
+      <svg id="steerIcon" viewBox="-20 -20 40 40"><g id="steerG"><circle r="16" fill="none" stroke="#e9eef4" stroke-width="3.5"/>
+        <path d="M-15 0 H15 M0 0 V15" stroke="#e9eef4" stroke-width="3"/><circle r="4" fill="#e9eef4"/><rect x="-2" y="-19" width="4" height="6" fill="#ffd23f"/></g></svg></div>
+    <div class="card" id="radar"><div class="lbl">雷達 <span id="muteTag"></span></div>
+      <div class="rv">前 <b id="rvF">-</b></div><div class="bar"><i id="rbF"></i></div>
+      <div class="rv">後 <b id="rvR">-</b></div><div class="bar"><i id="rbR"></i></div></div>
+  </div>
+
+  <div id="evalPanel" class="hidden"></div>
+  <div id="hint"></div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <h1>🅿️ 停車練習場</h1>
+    <p class="sub">選車型與場景 → 走到車旁按 <kbd>E</kbd> 上車 → 第一人稱停進黃色車格 → 下車按 <kbd>T</kbd> 用俯視圖看成果、<kbd>Enter</kbd> 評分。</p>
+    <h3>車型</h3><div class="grid" id="carList"></div>
+    <h3>場景</h3><div class="row" id="scenList"></div>
+    <h3>難度(車格餘裕)</h3><div class="row" id="diffList"></div>
+    <div class="actions">
+      <button class="btn primary" id="startBtn">開始練習</button>
+      <button class="btn ghost hidden" id="resumeBtn">繼續目前這局</button>
+      <span class="best" id="bestTxt"></span>
+    </div>
+    <div class="keys">
+      <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走路 / 開車</div>
+      <div><kbd>E</kbd> 上車 / 下車(需停妥)</div>
+      <div><kbd>W</kbd> 前進(D 檔)· <kbd>S</kbd> 煞車/倒車(R 檔)</div>
+      <div><kbd>Space</kbd> 手煞車 · <kbd>Shift</kbd> 跑步</div>
+      <div><kbd>V</kbd> 車內 / 車外視角 · <kbd>F</kbd> 視線回正</div>
+      <div><kbd>T</kbd> 俯視圖(滾輪縮放)</div>
+      <div><kbd>Enter</kbd> 提交評分 · <kbd>R</kbd> 重來</div>
+      <div><kbd>C</kbd> 方向盤自動回正 · <kbd>B</kbd> 雷達靜音</div>
+      <div>滑鼠:點畫面後轉頭看(可回頭看後方)</div>
+      <div><kbd>Esc</kbd> 選單</div>
+    </div>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="panel">
+    <div class="best" id="resultTitle"></div>
+    <div id="gradeBig">A</div>
+    <div id="scoreBig">86 分</div>
+    <div id="resultList"></div>
+    <ul id="resultNotes"></ul>
+    <div class="actions" style="justify-content:center">
+      <button class="btn primary" id="rRetry">再練一次 (R)</button>
+      <button class="btn ghost" id="rTop">看俯視圖</button>
+      <button class="btn ghost" id="rMenu">選單</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
