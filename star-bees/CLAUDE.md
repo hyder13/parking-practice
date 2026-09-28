@@ -1,6 +1,7 @@
 # CLAUDE.md — STAR BEES(star-bees/)
 
-懷舊小蜜蜂 3D 手機射擊。玩法 / 關卡見 README.md。目前放在 parking-practice repo 的子資料夾,獨立的 Vite 專案(自己的 package.json),之後可整包搬去新 repo。
+懷舊小蜜蜂 3D 手機射擊。玩法 / 關卡見 README.md。公開庫 https://github.com/hyder13/star-bees(main)。push main → `.github/workflows/deploy.yml` 自動部署 GitHub Pages:https://hyder13.github.io/star-bees/(`vite.config.js` base './' 不可拿掉)。
+最早在 parking-practice repo 的 star-bees/ 子資料夾開發,之後搬出來獨立。
 
 ## 事實卡
 - Vite 6 + three ^0.180,純前端、無圖檔音檔。`npm run dev` → port 5181。
