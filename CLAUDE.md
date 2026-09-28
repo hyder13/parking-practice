@@ -20,6 +20,7 @@
 | 物理、換檔、碰撞 | src/main.js `updateCar` |
 | 評分規則與扣分 | src/main.js `evaluate` |
 | 後照鏡 / 倒車影像 | src/game/mirrors.js |
+| 手機觸控操作 / 版面 | src/game/touch.js;index.html 的「觸控 / 手機版」CSS 區塊(`--edge-*` = 安全區 + 手勢區邊距) |
 | 描線 / 調色 | src/core/post.js(俯視圖的描線淡出距離在 main.js `updateCamera` 呼叫 `setInkFade`) |
 
 ## 座標慣例(改錯會整個反掉)
@@ -33,6 +34,10 @@
   `__game` 還有 `S`、`car`、`spot`、`keys`(設 `keys.KeyW=true` 模擬按鍵)、`onKey`、`evaluate`、`obstacles`。
 - 2026-09-26 驗證:7 車 × 3 場景 × 3 難度 = 63 組,起點無碰撞、完美停放不撞且評分入格;
   腳本實際倒車入庫(普通難度)轎車 / 休旅 / 貨卡 / 廂型 / 巴士皆 S 或 A、零碰撞。
+
+- 手機版面驗證(2026-09-28):8 種檢查(568x320、667x375、740x360、844x390、932x430,後三者再加模擬瀏海
+  safe-area 59px)× 走路 / 開車 D / 開車 R / 俯視 4 種狀態,控制之間零重疊、離側邊 ≥24px(瀏海時 ≥59)、離底 ≥24px。
+  觸控用 `?touch=1` 強制,合成 PointerEvent 模擬按壓(見 touch.js 的 `cap()` 包 setPointerCapture)。
 
 ## 雷區
 1. three r180 的 `MeshToonMaterial` 建構子不收 `flatShading`(每個材質噴 warning)→ 建構後再 `mat.flatShading = …`。

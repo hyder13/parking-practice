@@ -1,0 +1,14 @@
+{
+  "name": "停車練習場",
+  "short_name": "停車練習",
+  "description": "3D 停車練習:第一人稱開車、下車俯視圖評分",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f1318",
+  "theme_color": "#0f1318",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

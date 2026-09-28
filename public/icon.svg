@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#817d90"/>
+  <path d="M120 96v320M392 96v320M120 96h272" stroke="#f6f4f8" stroke-width="18" fill="none"/>
+  <rect x="160" y="150" width="192" height="260" rx="34" fill="#3f7fe0" stroke="#39324f" stroke-width="12"/>
+  <rect x="182" y="196" width="148" height="70" rx="14" fill="#9dc0d4" stroke="#39324f" stroke-width="8"/>
+  <rect x="182" y="300" width="148" height="56" rx="12" fill="#9dc0d4" stroke="#39324f" stroke-width="8"/>
+  <text x="256" y="480" font-family="Arial,sans-serif" font-weight="700" font-size="64" fill="#f0c341" text-anchor="middle">P</text>
+</svg>
