@@ -74,6 +74,10 @@ jobs:
         working-directory: ink-wuxia
       - run: cp -r ink-wuxia/dist dist/ink-wuxia
 
+      - run: npm ci && npm run build
+        working-directory: yarn-land
+      - run: cp -r yarn-land/dist dist/yarn-land
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
