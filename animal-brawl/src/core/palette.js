@@ -84,3 +84,6 @@ export const THEMES = [
   { name: '海灘', deep: 0xf0dca0, sea: 0xf8e8b8, foam: 0xd8b880, water: 0x2ab0d8, trunk: 0x7a5a3a, canopy: 0x3aa04a, canopy2: 0x5ab84a, tree: 'palm', props: ['parasol'],
     petal: 0xffffff, cloud: 0xf8fbff, key: 0xfff8ec, keyI: 2.6, hemi: 0xf4fbff, river: 1.4, trees: 2, camps: 1.6, petals: 3, clouds: 1.2, rocks: 1 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

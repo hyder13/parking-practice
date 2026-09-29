@@ -1,6 +1,14 @@
 // Adapted from Kenton-GMI/sakura-crossing (MIT) src/core/toon.js
 import * as THREE from 'three';
-import { PAL } from '@skin/core/palette.js';
+import * as SKIN_PAL from '@skin/core/palette.js';
+
+const PAL = SKIN_PAL.PAL;
+/**
+ * 可選:各款的材質畫風(palette.js export TOON)。
+ *   TOON = { key: '快取名稱', patch(shader, mat) { 改 shader.vertexShader / fragmentShader / uniforms } }
+ * 在 cel() 材質編譯時呼叫(陰影色調之後);flatPatch 同理用在 flat() 材質。沒有 export 就是原本的賽璐璐。
+ */
+const TOON = SKIN_PAL.TOON || null;
 
 /* ------------------------------------------------------------------ *
  * Cel shading
@@ -74,9 +82,11 @@ function applyShadowTint(mat, tint) {
       `#include <${TOON_CHUNK}>`,
       patchedChunk
     );
+    if (TOON && TOON.patch) TOON.patch(shader, mat);
   };
   const hex = new THREE.Color(tint).getHexString();
-  mat.customProgramCacheKey = () => 'celTint_' + hex;
+  const tk = TOON && TOON.patch ? '_' + TOON.key : '';
+  mat.customProgramCacheKey = () => 'celTint_' + hex + tk;
   return mat;
 }
 
@@ -158,6 +168,10 @@ export function flat(opts = {}) {
     color, map, transparent, opacity, side, alphaTest, fog, toneMapped,
   });
   if (depthWrite !== null) mat.depthWrite = depthWrite;
+  if (TOON && TOON.flatPatch) {
+    mat.onBeforeCompile = (shader) => TOON.flatPatch(shader, mat);
+    mat.customProgramCacheKey = () => 'flat_' + TOON.key + (transparent ? 't' : '');
+  }
   if (key) flatCache.set(key, mat);
   return mat;
 }

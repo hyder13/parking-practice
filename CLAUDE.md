@@ -29,9 +29,11 @@
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/animal-brawl/。
 - 同一個 repo 的 `sengoku/` 是日本戰國(織田信長)主題換皮(天下布武,見 sengoku/CLAUDE.md),
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/sengoku/。
-- 同一個 repo 的 `arcade-core/` 是上面八款換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku)的共用引擎
+- 同一個 repo 的 `cartoon-1930/` 是 1930 年代黑白橡皮管卡通換皮(黑白卡通劇場,見 cartoon-1930/CLAUDE.md),第一款「換畫法」的(底片 shader),
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/cartoon-1930/。
+- 同一個 repo 的 `arcade-core/` 是上面所有換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku / cartoon-1930)的共用引擎
   (不是獨立專案,各款 vite.config.js 用 `@arcade` alias 引入;見 arcade-core/CLAUDE.md)。star-bees 不用它。
-  改 arcade-core = 八款一起變 → 每款都要 build + 實測。
+  改 arcade-core = 全部一起變 → 每款都要 build + 實測。
 
 ## 授權邊界
 - 【使用者授權 2026-09-28】本專案 `git push` 到 origin main(= 自動部署 GitHub Pages 公開網站)不用再問;

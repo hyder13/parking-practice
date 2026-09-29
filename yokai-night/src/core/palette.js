@@ -85,3 +85,6 @@ export const THEMES = [
   { name: '紅葉', side: 'forest', deep: 0x9a3422, sea: 0xd8682e, road: 0xd8b888, grout: 0x9a7a58, pave: 1, roof: 0x4a4e5c, tree: 'maple', gate: 'torii',
     petal: 0xe8502a, cloud: 0xf0d090, key: 0xffc890, keyI: 2.2, hemi: 0xffe0c8, houses: 1.2, temples: 1.4, stalls: 5, lanterns: 1.2, petals: 10, clouds: 1.2 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

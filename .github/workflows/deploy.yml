@@ -61,6 +61,11 @@ jobs:
       - run: npm ci && npm run build
         working-directory: sengoku
       - run: cp -r sengoku/dist dist/sengoku
+
+      - run: npm ci && npm run build
+        working-directory: cartoon-1930
+      - run: cp -r cartoon-1930/dist dist/cartoon-1930
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

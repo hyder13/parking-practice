@@ -76,3 +76,6 @@ export const THEMES = [
   { name: '漁港', side: 'harbor', deep: 0x2a6a9a, sea: 0x3a8ab8, road: 0xb8b4a8, grout: 0x8a867a, petal: 0xe8322e, cloud: 0xf4f8ff, key: 0xfff4e8, keyI: 2.4, hemi: 0xf0f8ff, houses: 2, temples: 0.8, stalls: 2, lanterns: 1.5, petals: 5, clouds: 1.5 },
   { name: '燈會', side: 'town', deep: 0x1e1a3a, sea: 0x2a2450, road: 0x4a4468, grout: 0x2e2a48, petal: 0xffd86a, cloud: 0x6a5a9a, key: 0xd0c0ff, keyI: 1.9, hemi: 0xa898e0, houses: 5, temples: 0.8, stalls: 2, lanterns: 6, petals: 6, clouds: 1 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

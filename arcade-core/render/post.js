@@ -36,6 +36,7 @@ const INK_SHADER = {
     uFadeEnd: { value: 98.0 },
     uStrength: { value: 1.0 },
     uSkyDepth: { value: 420.0 },
+    uTime: { value: 0 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -52,8 +53,14 @@ const INK_SHADER = {
     uniform float uNear, uFar;
     uniform vec3 uInk;
     uniform float uThickness, uSens, uConcave, uConcaveAmount;
-    uniform float uFadeStart, uFadeEnd, uStrength, uSkyDepth;
+    uniform float uFadeStart, uFadeEnd, uStrength, uSkyDepth, uTime;
     varying vec2 vUv;
+    float inkHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+    float inkNoise( vec2 p ) {
+      vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
+      return mix( mix( inkHash( i ), inkHash( i + vec2( 1, 0 ) ), f.x ), mix( inkHash( i + vec2( 0, 1 ) ), inkHash( i + vec2( 1, 1 ) ), f.x ), f.y );
+    }
+    /*@INK_FNS@*/
 
     float linearDepth( vec2 uv ) {
       float d = texture2D( tDepth, uv ).x;
@@ -64,7 +71,9 @@ const INK_SHADER = {
       vec3 col = texture2D( tDiffuse, vUv ).rgb;
 
       vec2 t = uTexel * uThickness;
-      float dc = linearDepth( vUv );
+      vec2 suv = vUv;
+      /*@INK_PRE@*/
+      float dc = linearDepth( suv );
 
       if ( dc > uSkyDepth ) {
         // pure sky: nothing to ink
@@ -72,10 +81,10 @@ const INK_SHADER = {
         return;
       }
 
-      float dl = linearDepth( vUv - vec2( t.x, 0.0 ) );
-      float dr = linearDepth( vUv + vec2( t.x, 0.0 ) );
-      float du = linearDepth( vUv + vec2( 0.0, t.y ) );
-      float dd = linearDepth( vUv - vec2( 0.0, t.y ) );
+      float dl = linearDepth( suv - vec2( t.x, 0.0 ) );
+      float dr = linearDepth( suv + vec2( t.x, 0.0 ) );
+      float du = linearDepth( suv + vec2( 0.0, t.y ) );
+      float dd = linearDepth( suv - vec2( 0.0, t.y ) );
 
       // second difference of linear depth, normalised by distance
       float sx = ( dl + dr - 2.0 * dc ) / dc;
@@ -93,6 +102,7 @@ const INK_SHADER = {
 
       // ink keeps a whisper of the underlying hue so it never looks pasted on
       vec3 line = mix( uInk, col * 0.42, 0.22 );
+      /*@INK_POST@*/
       gl_FragColor = vec4( mix( col, line, clamp( edge, 0.0, 1.0 ) ), 1.0 );
     }
   `,
@@ -190,6 +200,42 @@ const FXAA_SHADER = {
   `,
 };
 
+/**
+ * 各款自己的「畫風」pass(skin.js LOOK.style):在調色 + FXAA 之後、上螢幕之前跑一次全螢幕 shader。
+ *   LOOK.style = { uniforms: { 名字: 值 }, frag: 'GLSL,要寫 void main()' }
+ * 內建可用:tDiffuse(已調色的 sRGB 畫面)、tDepth、uTexel、uRes(像素大小)、uTime(秒)、
+ * uFilter(標題畫面「濾鏡」鈕:1 開 / 0 關)、linearDepth(uv)、hash / noise(vec2)。
+ */
+const STYLE_HEAD = /* glsl */ `
+  #include <packing>
+  uniform sampler2D tDiffuse;
+  uniform sampler2D tDepth;
+  uniform vec2 uTexel, uRes;
+  uniform float uTime, uFilter, uNear, uFar;
+  varying vec2 vUv;
+  float linearDepth( vec2 uv ) { return -perspectiveDepthToViewZ( texture2D( tDepth, uv ).x, uNear, uFar ); }
+  float hash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+  float noise( vec2 p ) {
+    vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
+    return mix( mix( hash( i ), hash( i + vec2( 1, 0 ) ), f.x ), mix( hash( i + vec2( 0, 1 ) ), hash( i + vec2( 1, 1 ) ), f.x ), f.y );
+  }
+`;
+function styleShader(style) {
+  const uniforms = {
+    tDiffuse: { value: null }, tDepth: { value: null },
+    uTexel: { value: new THREE.Vector2() }, uRes: { value: new THREE.Vector2() },
+    uTime: { value: 0 }, uFilter: { value: 1 }, uNear: { value: 0.25 }, uFar: { value: 600 },
+  };
+  const decl = [];
+  for (const [k, v] of Object.entries(style.uniforms || {})) {
+    const isColor = typeof v === 'object' && v !== null && 'color' in v;
+    if (isColor) { uniforms[k] = { value: new THREE.Color(v.color) }; decl.push(`uniform vec3 ${k};`); }
+    else if (Array.isArray(v)) { uniforms[k] = { value: new THREE.Vector2(...v) }; decl.push(`uniform vec2 ${k};`); }
+    else { uniforms[k] = { value: v }; decl.push(`uniform float ${k};`); }
+  }
+  return { uniforms, vertexShader: INK_SHADER.vertexShader, fragmentShader: STYLE_HEAD + decl.join('\n') + '\n' + style.frag };
+}
+
 function setUniforms(u, vals) {
   for (const [k, v] of Object.entries(vals)) {
     if (!u[k]) continue;
@@ -212,7 +258,7 @@ export class Pipeline {
   /**
    * gradeOpts / inkOpts:覆寫對應 pass 的 uniform(例如太空背景要把 uLift 設 0,黑色才不會變灰)。
    */
-  constructor(renderer, scene, camera, { pixelBudget = 4.6e6, gradeOpts = {}, inkOpts = {} } = {}) {
+  constructor(renderer, scene, camera, { pixelBudget = 4.6e6, gradeOpts = {}, inkOpts = {}, inkHooks = null, style = null } = {}) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
@@ -239,7 +285,15 @@ export class Pipeline {
       ...opts, type: THREE.UnsignedByteType, depthBuffer: false,
     });
 
-    const ink = makeQuad(INK_SHADER);
+    // 描線的客製點(skin.js LOOK.inkHooks):fns = 輔助函式、pre = 改取樣位置 suv / 粗細 t、post = 改 edge / line
+    const inkDef = inkHooks ? {
+      ...INK_SHADER,
+      fragmentShader: INK_SHADER.fragmentShader
+        .replace('/*@INK_FNS@*/', inkHooks.fns || '')
+        .replace('/*@INK_PRE@*/', inkHooks.pre || '')
+        .replace('/*@INK_POST@*/', inkHooks.post || ''),
+    } : INK_SHADER;
+    const ink = makeQuad(inkDef);
     const grade = makeQuad(GRADE_SHADER);
     const fxaa = makeQuad(FXAA_SHADER);
     this.ink = ink;
@@ -249,8 +303,18 @@ export class Pipeline {
     ink.mat.uniforms.tDepth.value = this.rtScene.depthTexture;
     setUniforms(grade.mat.uniforms, gradeOpts);
     setUniforms(ink.mat.uniforms, inkOpts);
+    this.style = null;
+    if (style) {
+      this.style = makeQuad(styleShader(style));
+      this.style.mat.uniforms.tDepth.value = this.rtScene.depthTexture;
+      this.rtC = new THREE.WebGLRenderTarget(2, 2, { ...opts, type: THREE.UnsignedByteType, depthBuffer: false });
+    }
     this.enabled = { ink: true, grade: true, fxaa: true };
+    this.time = 0;
   }
+
+  /** 標題畫面的「濾鏡」鈕(畫風 pass 裡用 uFilter 決定雜訊 / 刮痕之類要不要畫) */
+  setFilter(on) { if (this.style) this.style.mat.uniforms.uFilter.value = on ? 1 : 0; }
 
   /** Resolution scale: supersample a little on low-DPI screens for clean ink. */
   setSize(w, h) {
@@ -270,6 +334,12 @@ export class Pipeline {
     this.rtScene.setSize(rw, rh);
     this.rtA.setSize(rw, rh);
     this.rtB.setSize(rw, rh);
+    if (this.rtC) {
+      this.rtC.setSize(rw, rh);
+      const su = this.style.mat.uniforms;
+      su.uTexel.value.set(1 / rw, 1 / rh); su.uRes.value.set(rw, rh);
+      su.uNear.value = this.camera.near; su.uFar.value = this.camera.far;
+    }
 
     const texel = new THREE.Vector2(1 / rw, 1 / rh);
     this.ink.mat.uniforms.uTexel.value.copy(texel);
@@ -286,8 +356,10 @@ export class Pipeline {
     this.ink.mat.uniforms.uFadeEnd.value = end;
   }
 
+  /** this.time(秒)由呼叫端推進(main.js tick),畫風 / 描線 shader 的 uTime 用它 */
   render() {
     const r = this.renderer;
+    this.ink.mat.uniforms.uTime.value = this.time;
     r.setRenderTarget(this.rtScene);
     r.clear();
     r.render(this.scene, this.camera);
@@ -301,22 +373,29 @@ export class Pipeline {
       src = this.rtA.texture;
     }
 
-    const last = this.enabled.fxaa ? this.rtB : null;
+    const last = this.enabled.fxaa || this.style ? this.rtB : null;
     this.grade.mat.uniforms.tDiffuse.value = src;
     r.setRenderTarget(last);
     this.grade.quad.render(r);
 
     if (this.enabled.fxaa) {
       this.fxaa.mat.uniforms.tDiffuse.value = this.rtB.texture;
-      r.setRenderTarget(null);
+      r.setRenderTarget(this.style ? this.rtC : null);
       this.fxaa.quad.render(r);
+    }
+    if (this.style) {
+      const su = this.style.mat.uniforms;
+      su.tDiffuse.value = this.enabled.fxaa ? this.rtC.texture : this.rtB.texture;
+      su.uTime.value = this.time;
+      r.setRenderTarget(null);
+      this.style.quad.render(r);
     }
     r.setRenderTarget(null);
   }
 
   dispose() {
-    [this.rtScene, this.rtA, this.rtB].forEach((rt) => rt.dispose());
-    [this.ink, this.grade, this.fxaa].forEach((p) => {
+    [this.rtScene, this.rtA, this.rtB, this.rtC].forEach((rt) => rt && rt.dispose());
+    [this.ink, this.grade, this.fxaa, this.style].filter(Boolean).forEach((p) => {
       p.quad.dispose();
       p.mat.dispose();
     });

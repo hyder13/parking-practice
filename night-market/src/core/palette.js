@@ -83,3 +83,6 @@ export const THEMES = [
   { name: '過年夜市', side: 'town', deep: 0x4a1a22, sea: 0x6a2430, road: 0x9a7870, grout: 0x6a4a48, petal: 0xffd24a, cloud: 0xfff0e0, wet: 0,
     key: 0xffd8a0, keyI: 2.4, hemi: 0xffe0c8, houses: 6, temples: 0.8, stalls: 7, lanterns: 6, petals: 10, clouds: 2 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

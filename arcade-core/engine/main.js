@@ -9,7 +9,7 @@ import { Sea } from '@skin/game/sea.js';
 import { FX } from './fx.js';
 import { Game } from './game.js';
 import { spawnModel } from '@skin/game/models.js';
-import { META, TEXT, LOOK } from '@skin/skin.js';
+import { META, TEXT, LOOK, FEEL } from '@skin/skin.js';
 
 /* ------------------------------------------------------------------ *
  * 進入點(所有換皮共用):renderer / 鏡頭 / HUD / 輸入 / 選單。
@@ -47,6 +47,8 @@ const pipeline = new Pipeline(renderer, scene, camera, {
   pixelBudget: IS_TOUCH ? 1.3e6 : 4.2e6,
   gradeOpts: LOOK.grade,
   inkOpts: LOOK.ink,
+  inkHooks: LOOK.inkHooks,   // 可選:描線 shader 的客製點(手抖、毛筆粗細…)
+  style: LOOK.style,         // 可選:最後一道「畫風」pass(網點、底片、宣紙…)
 });
 
 /* ================= camera fit ================= */
@@ -224,7 +226,12 @@ const game = new Game(scene, {
   popup,
   sfx: (n, a) => sfx[n] && sfx[n](a),
   loadAch: () => [...achSet], achieve, progress, status, combo, feed, evolved, bossBar, flash,
-  explode: (x, y, c, o) => fx.explode(x, y, c, o),
+  explode: (x, y, c, o) => {
+    fx.explode(x, y, c, o);
+    // 可選:爆炸跳出狀聲詞(美漫的 POW!),FEEL.boomWord(o) 回傳 [字, CSS class] 或 null
+    const w = FEEL.boomWord && FEEL.boomWord(o || {});
+    if (w) popup(x, y + 0.6, w[0], w[1]);
+  },
   setBeam: (...a) => fx.setBeam(...a),
   shake: (a) => { view.shake = Math.max(view.shake, a); },
   vibrate: (ms) => { if (!isMuted()) try { navigator.vibrate && navigator.vibrate(ms); } catch { /* 不支援 */ } },
@@ -286,7 +293,7 @@ $('btnSnd').addEventListener('click', toggleMute);
 $('btnMute').addEventListener('click', (e) => { e.stopPropagation(); toggleMute(); });
 
 let crt = store.get('crt', '1') === '1';
-const syncCrt = () => { $('crt').classList.toggle('hidden', !crt); $('btnCrt').textContent = `${TEXT.crt} ${crt ? 'ON' : 'OFF'}`; };
+const syncCrt = () => { $('crt').classList.toggle('hidden', !crt); pipeline.setFilter(crt); $('btnCrt').textContent = `${TEXT.crt} ${crt ? 'ON' : 'OFF'}`; };
 syncCrt();
 $('btnCrt').addEventListener('click', () => { crt = !crt; store.set('crt', crt ? '1' : '0'); syncCrt(); });
 
@@ -381,6 +388,7 @@ function tick(dt, draw = true) {
       camera.updateMatrixWorld();
     }
   }
+  pipeline.time += dt;
   if (draw) pipeline.render();
 }
 

@@ -84,3 +84,6 @@ export const THEMES = [
   { name: '本能寺', deep: 0x2a2030, sea: 0x3a2c3a, foam: 0x6a5a58, water: 0x2a3a5a, trunk: 0x2a1e18, canopy: 0x3a2a2a, canopy2: 0x4a3024, tree: 'round', props: ['temple', 'ruins', 'ruins'],
     petal: 0xff7a2a, cloud: 0x4a3a40, key: 0xff9a60, keyI: 2.0, hemi: 0xb88898, river: 0, trees: 2, camps: 2, petals: 16, clouds: 2.5, rocks: 1 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

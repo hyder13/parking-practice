@@ -76,3 +76,6 @@ export const THEMES = [
   { name: '南蠻', deep: 0x347434, sea: 0x4a9446, foam: 0xb86a4a, water: 0x3a8a8a, trunk: 0x6a4a2a, canopy: 0x2a8a3a, canopy2: 0x5ab040, petal: 0xb8e060, cloud: 0xe8f4e8, key: 0xfff8e0, keyI: 2.4, hemi: 0xe8fff0, river: 0.6, trees: 6.5, camps: 0.8, petals: 4, clouds: 1.5, rocks: 1 },
   { name: '五丈原', deep: 0xae8446, sea: 0xcaa25e, foam: 0x8a6a4a, water: 0x5a7a9a, trunk: 0x5a3a2a, canopy: 0xd8642a, canopy2: 0xe8a03a, petal: 0xe86a3a, cloud: 0xf0dcc8, key: 0xffb880, keyI: 2.2, hemi: 0xffe0c8, river: 0, trees: 3, camps: 1.6, petals: 8, clouds: 1.5, rocks: 1.5 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

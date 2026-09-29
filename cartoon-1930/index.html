@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#141210">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="黑白卡通劇場">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23141210'/%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23f8f4ea' stroke-width='1.2'/%3E%3Cellipse cx='6.3' cy='7.5' rx='1.2' ry='1.8' fill='%23f8f4ea'/%3E%3Cellipse cx='9.7' cy='7.5' rx='1.2' ry='1.8' fill='%23f8f4ea'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rye&display=swap" rel="stylesheet">
+<title>黑白卡通劇場 CARTOON REEL 1930</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import);這裡只放這款的黑白卡通樣式 */
+  :root{--loop-label:"蹦";--loop-fs:1.25;--loop-bg:rgba(20,18,16,.6);
+    --bg:#141210;--red:#f8f4ea;--orange:#d8d0c0;--cyan:#e8e0d0;--blue:#c8c2b6;--white:#fffcf4;--yellow:#fff4d8;--muted:#b8b2a6;--line:#8a847a;
+    --panel:rgba(20,18,16,.85)}
+  /* HUD 跟畫面一樣是黑白的(共用 CSS 的彩色漸層 / 發光也一起去色) */
+  #hud,#hudB,#bossBar,#combo,#feed,#msg,.pop,#btnLoop,.overlay{filter:grayscale(1) sepia(.12)}
+  #btnLoop{border-color:rgba(248,244,234,.85);box-shadow:0 0 10px rgba(248,244,234,.3)}
+  .overlay{background:radial-gradient(ellipse at 50% 45%,rgba(20,18,16,.35),rgba(20,18,16,.9))}
+  /* 標題:老卡通片頭的同心圓 + 手寫感的西部字體 */
+  #title .card{position:relative}
+  .rings{position:relative;width:min(330px,82vw,48vh);aspect-ratio:1;margin:6px auto 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:50%;background:repeating-radial-gradient(circle,#1a1816 0 14px,#f4efe4 14px 28px);box-shadow:0 0 0 6px #f4efe4,0 0 0 12px #1a1816}
+  .rings::before{content:"";position:absolute;inset:18%;border-radius:50%;background:#f4efe4;box-shadow:0 0 0 5px #1a1816}
+  .rings>*{position:relative}
+  #title .logo.big{font-size:clamp(18px,min(11vw,6.4vh),54px);letter-spacing:.02em;line-height:1.1;background:none;color:#1a1816;filter:none;margin:0}
+  .reel{font-family:Rye,Georgia,serif;font-size:clamp(9px,min(4.2vw,2.5vh),19px);letter-spacing:.12em;color:#1a1816;margin-top:.2em}
+  #title .year{font-family:Rye,Georgia,serif;color:#f4efe4;letter-spacing:.2em;margin-top:.7em}
+  #title .sub{color:#e8e0d0}
+  .pop{font-family:Rye,var(--cjk)}
+  #crt{display:none!important} /* 老膠卷的顆粒 / 刮痕在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 臨時演員</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="蹦">蹦</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="rings"><div class="logo big">黑白卡通<br>劇場</div><div class="reel">CARTOON REEL</div></div>
+    <div class="year">~ 1930 ~</div>
+    <div class="sub">小咚的三十集冒險</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="骷髏"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="小幽靈"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="跳舞的花"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">喇叭</span><span class="cyan">R</span><span class="h">快板</span><span class="green">S</span><span class="h">泡泡糖</span>
+      <span>B</span><span class="h">大炸彈</span><span>W</span><span class="h">小鋼琴</span><span class="yellow">1UP</span><span class="h">熱狗</span>
+    </div>
+    <div class="small">三十集 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">老膠卷 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾集 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">星途 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

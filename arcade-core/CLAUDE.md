@@ -3,7 +3,8 @@
 星際小蜜蜂式 3D 縱向射擊的引擎:陣型 / 俯衝 / 30 關 / 成長系統 / 道具 / BOSS 流程 / HUD / 觸控 / 描線後製。
 **不是獨立專案**(沒有 package.json),由各款遊戲的 Vite 用 alias 引進來一起打包。
 
-用的遊戲:`sky-aces/`、`monkey-king/`、`three-kingdoms/`、`temple-fair/`、`yokai-night/`(第一款直接用引擎做的換皮)、`night-market/`、`animal-brawl/`、`sengoku/`。
+用的遊戲:`sky-aces/`、`monkey-king/`、`three-kingdoms/`、`temple-fair/`、`yokai-night/`(第一款直接用引擎做的換皮)、`night-market/`、`animal-brawl/`、`sengoku/`、
+`cartoon-1930/`(第一款「換畫法」的:黑白底片)。
 `star-bees/` 是最早的原版,**不用** arcade-core(它另外有自己的 repo hyder13/star-bees)。
 
 【2026-09-29 使用者要求「先抽離完全共用」】四款裡一模一樣、或只差文字 / 少數手感參數的程式都搬到這裡;
@@ -30,7 +31,7 @@
 | 檔案 | 要 export |
 |---|---|
 | src/skin.js | `META`(`store` localStorage 前綴)、`TEXT`(所有畫面文字)、`FEEL`(手感)、`LOOK`(`grade` / `ink` 後製參數) |
-| src/core/palette.js | `PAL`(引擎用到 ink / sea / key / fill / rim / hemiSky / hemiGround / smoke / beam / beam2 / white / engine、ship* / bee* / bfly* / boss* / captive*)、`THEMES` |
+| src/core/palette.js | `PAL`(引擎用到 ink / sea / key / fill / rim / hemiSky / hemiGround / smoke / beam / beam2 / white / engine、ship* / bee* / bfly* / boss* / captive*)、`THEMES`、`TOON`(材質畫風,沒有就寫 `null`) |
 | src/core/pixel.js | `SPRITES`(ship / bee / bfly / boss / flag / badge5 / badge10 / badge50)、`COLORS` |
 | src/core/audio.js | `sfx` = `{ ...baseSfx, shot, loop, rocket, warning, bomb, levelUp, beam, start, stage, … }` |
 | src/game/models.js | `spawnModel`、`spinProps`、`flapWings`(沒有就寫空函式)、`shotBatch`、`enemyShotBatch`、`BOSS_HIT_SWAP`、`SHIP_LV`、`ITEMS` |
@@ -39,9 +40,21 @@
 | src/game/stages.js | `BOSS_KINDS`、`TWIST_HINTS`、`STAGE_TABLE`(30 關)、`STAGE_THEME`(每關用哪個 THEMES) |
 | src/main.js | 一兩行:`import '@arcade/ui/hud.css'`(要用共用 CSS 才加)+ `import '@arcade/engine/main.js'` |
 
+`LOOK` 可選欄位(換畫法用,見下面「畫風 hook」):`inkHooks`、`style`。`FEEL` 可選:`boomWord(o)`(爆炸跳出狀聲詞)。
+
 `FEEL` 欄位:`popup`(立體書 Q 彈)、`dodge`('flip' 翻筋斗 / 'hop' 往鏡頭跳)、`gait`([頻率, 高度] 走路顛)、
 `groundZ`(地面影子深度,飛行版 0)、`dualDx`(雙機間距)、`ally`(雙機第二台的模型前綴 'ship' / 'ally')、
 `hop(e)`(敵人上下起伏)、`rockSpin()`(障礙物旋轉)。`TEXT` 欄位照 temple-fair/src/skin.js 抄。
+
+## 畫風 hook(【2026-09-29】為了「換畫法」的換皮加的,不用就是原本的賽璐璐 + 描線)
+| hook | 在哪 | 做什麼 |
+|---|---|---|
+| `LOOK.style = { uniforms, frag }` | render/post.js `styleShader` | 調色 + FXAA 之後再跑一道全螢幕 shader(frag 寫 `void main()`)。內建 `tDiffuse`(sRGB 畫面)、`tDepth`、`uTexel`、`uRes`、`uTime`、`uFilter`(標題「濾鏡」鈕 = `TEXT.crt`)、`linearDepth(uv)`、`hash` / `noise`。uniforms:數字 → float、`[a, b]` → vec2、`{ color: 0x… }` → vec3 |
+| `LOOK.inkHooks = { fns, pre, post }` | render/post.js 描線 shader 的 `/*@INK_FNS@*/` 等標記 | `pre` 可改取樣位置 `suv` 和粗細 `t`(手抖、毛筆粗細)、`post` 可改 `edge` / `line`;可用 `uTime`、`inkNoise(vec2)` |
+| palette.js `TOON = { key, patch(shader, mat), flatPatch }` | render/toon.js | `cel()` 材質編譯時改 shader(網點陰影、毛線紋路…);`key` 會進 program cache key |
+| `FEEL.boomWord(o)` | engine/main.js `explode` | 回傳 `[字, 'CSS class']` 就在爆炸位置跳字(美漫的 POW!) |
+- 注意:`pipeline.setSize` 會重設 `uThickness`(依解析度),`LOOK.ink.uThickness` 其實蓋不過去 → 要更粗在 `inkHooks.pre` 乘 `t`。
+- `pipeline.time` 由 main.js `tick` 推進(`__game.step` 也會),畫風 shader 的 `uTime` 用它。
 
 ## 各款的 vite.config.js(必要設定)
 ```js

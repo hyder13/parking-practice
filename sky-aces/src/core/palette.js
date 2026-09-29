@@ -72,3 +72,6 @@ export const THEMES = [
   { name: 'ARCTIC', deep: 0x1d4a6a, sea: 0x3a7a9a, foam: 0xffffff, cloud: 0xf0f8ff, key: 0xf0f6ff, keyI: 2.3, hemi: 0xe8f4ff, islands: 0.4, ships: 1.0, ice: 7, clouds: 4 },
   { name: 'NIGHT', deep: 0x0f1f40, sea: 0x1c3566, foam: 0x7a9ad0, cloud: 0x5a6a94, key: 0xc0d0ff, keyI: 2.0, hemi: 0x8a9ad0, islands: 1.2, ships: 1.8, ice: 0, clouds: 4 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;

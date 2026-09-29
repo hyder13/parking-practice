@@ -75,3 +75,6 @@ export const THEMES = [
   { name: '雪山', deep: 0xb4c4d4, sea: 0xf0f4f8, foam: 0x7a8aa0, cloud: 0xffffff, rock: 0x8a9ab0, top: 0xffffff, pine: 0x3a5a6a, petal: 0xffffff, key: 0xf0f6ff, keyI: 2.3, hemi: 0xf0f6ff, peaks: 3.4, cranes: 0.8, petals: 12, clouds: 4 },
   { name: '盤絲洞', deep: 0x2a1a3a, sea: 0x4a3066, foam: 0xb080e0, cloud: 0x7a6aa0, rock: 0x3a2a4a, top: 0x6a4a8a, pine: 0x1a1024, petal: 0xd8ff6a, key: 0xd0c0ff, keyI: 2.0, hemi: 0xa090d0, peaks: 2.6, cranes: 0, petals: 6, clouds: 4 },
 ];
+
+/** 材質畫風(arcade-core/render/toon.js);null = 原本的賽璐璐 */
+export const TOON = null;
