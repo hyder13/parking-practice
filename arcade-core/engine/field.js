@@ -1,5 +1,8 @@
+import { BOSS_KINDS, TWIST_HINTS, STAGE_TABLE, STAGE_THEME } from '@skin/game/stages.js';
+
+export { BOSS_KINDS, STAGE_TABLE, STAGE_THEME };
 /* ------------------------------------------------------------------ *
- * 遊戲常數 + 30 關的關卡表。
+ * 遊戲常數 + 關卡邏輯(所有換皮共用)。關卡表 / 名字 / BOSS 種類在各遊戲的 src/game/stages.js。
  *
  * 座標:遊戲平面 = 世界 XY 平面(z = 0),+x 向右、+y 向上(畫面上方),
  * z 朝向鏡頭。場地 x ∈ ±FW/2、y ∈ ±FH/2,比例接近原作直立街機 (7:9.5)。
@@ -65,13 +68,13 @@ const wave = (base, path, s, pair = false) => ({ ...W[base], path, s, pair });
 
 export const MAX_STAGE = 30;
 
-/* ---------------- 30 關(每一關都有自己的名字、陣型、變化) ----------------
+/* ---------------- 30 關(每一關都有自己的名字、陣型、變化;表在 stages.js) ----------------
  * 【使用者回饋 2026-09-29】100 關每關差不多 → 濃縮成 30 關,重點是每關都有變化、難度明顯往上。
  *   shape   陣型形狀:grid 方陣 / arch 拱形 / v V 字 / peak 倒 V / wave 會動的波浪
  *   twists  關卡機制(可疊加,見 TWISTS)
  *   paths   每一波的進場軌跡(第 0 波左右成對;第 3、4 波若是 spiral/zig 也成對)
  *   bosses  關底 BOSS,多隻 = 連戰(第 10、20 關兩隻,第 30 關三隻 BOSS RUSH)
- * 每 5 關的第 3 關(3, 8, 13, 18, 23, 28)是獎勵關,最後是不會攻擊的金蟠桃。
+ * 每 5 關的第 3 關(3, 8, 13, 18, 23, 28)是獎勵關,最後是不會攻擊的金色目標(BOSS_INFO.gold)。
  * 第 31 關以後:30 關再輪一次,整體再加速(EXTRA)。
  *
  * 數值參數(依難度進度 t = 0..1 內插,再被 twists 修改)
@@ -84,58 +87,22 @@ export const MAX_STAGE = 30;
  *   reinforce   增援輪數(陣型剩不多時再補滿一輪)
  */
 const lerpT = (a, b, t) => a + (b - a) * t;
-export const BOSS_KINDS = ['bull', 'bone', 'horn'];
-
-/** 關卡機制:中文提示只在關卡開場顯示一次 */
-export const TWISTS = {
-  snipers: { hint: '編隊中的妖怪會瞄準你開火', apply: (c) => { c.formFire = lerpT(2.4, 1.0, c.t); c.diveEvery *= 1.25; } },
-  meteors: { hint: '小心滾過來的妖火石', apply: (c) => { c.meteors = lerpT(1.7, 0.9, c.t); } },
-  meteors2: { hint: '妖火石雨!', apply: (c) => { c.meteors = 0.45; } },
-  escort: { hint: '天兵會帶著護衛一起俯衝', apply: (c) => { c.escort = 1; c.beamChance = 0; c.bossDive = 0.4; } },
-  kamikaze: { hint: '妖怪會高速衝撞,但不開火', apply: (c) => { c.diveShots = 0; c.diveMul = 1.3; c.beeLoop = 0.85; c.maxDivers += 2; c.diveEvery *= 0.7; } },
-  beam: { hint: '天兵會停在你上方連擲長槍,而且更耐打', apply: (c) => { c.beamChance = 0.9; c.bossHp = 3; c.bossDive = 0.35; } },
-  swarm: { hint: '妖怪又快又多', apply: (c) => { c.enterSpeed *= 1.2; c.enterFire = Math.min(0.8, (c.enterFire || 0) + 0.3); c.maxDivers += 2; c.diveEvery *= 0.7; c.diveFrom = Math.min(c.diveFrom, 2); } },
-  armored: { hint: '妖怪披上鐵甲,要打兩下', apply: (c) => { c.armored = true; } },
-  zigzag: { hint: '俯衝時會左右蛇行', apply: (c) => { c.weave = 1.8 + c.t; } },
-  barrage: { hint: '編隊會整排往下齊射', apply: (c) => { c.barrage = lerpT(3.2, 1.6, c.t); } },
+/** 關卡機制(數值);提示文字在各遊戲的 stages.js TWIST_HINTS,開場顯示一次 */
+const TWIST_APPLY = {
+  snipers: { apply: (c) => { c.formFire = lerpT(2.4, 1.0, c.t); c.diveEvery *= 1.25; } },
+  meteors: { apply: (c) => { c.meteors = lerpT(1.7, 0.9, c.t); } },
+  meteors2: { apply: (c) => { c.meteors = 0.45; } },
+  escort: { apply: (c) => { c.escort = 1; c.beamChance = 0; c.bossDive = 0.4; } },
+  kamikaze: { apply: (c) => { c.diveShots = 0; c.diveMul = 1.3; c.beeLoop = 0.85; c.maxDivers += 2; c.diveEvery *= 0.7; } },
+  beam: { apply: (c) => { c.beamChance = 0.9; c.bossHp = 3; c.bossDive = 0.35; } },
+  swarm: { apply: (c) => { c.enterSpeed *= 1.2; c.enterFire = Math.min(0.8, (c.enterFire || 0) + 0.3); c.maxDivers += 2; c.diveEvery *= 0.7; c.diveFrom = Math.min(c.diveFrom, 2); } },
+  armored: { apply: (c) => { c.armored = true; } },
+  zigzag: { apply: (c) => { c.weave = 1.8 + c.t; } },
+  barrage: { apply: (c) => { c.barrage = lerpT(3.2, 1.6, c.t); } },
 };
 
-const S = (name, shape, twists, paths, bosses = null) => ({ name, shape, twists, paths, bosses });
-const C = (name, level) => ({ name, challenge: level });
-export const STAGE_TABLE = [
-  S('花果山', 'grid', [], ['top', 'side']),                                                                    // 1
-  S('水簾洞', 'arch', [], ['topLoop', 'diag', 'diag']),                                                        // 2
-  C('蟠桃園', 0),                                                                                               // 3
-  S('天兵天將', 'v', ['snipers'], ['top', 'sideHigh', 'sideHigh', 'diag']),                                     // 4
-  S('火雲洞', 'grid', ['meteors'], ['dropIn', 'side', 'side', 'spiral']),                                       // 5
-  S('黑風山', 'arch', ['escort'], ['topLoop', 'loopBig', 'loopBig', 'diag', 'diag']),                           // 6
-  S('群魔亂舞', 'wave', ['kamikaze'], ['zig', 'side', 'side', 'spiral', 'spiral']),                            // 7
-  C('人參果園', 1),                                                                                             // 8
-  S('天羅地網', 'peak', ['beam'], ['top', 'sideHigh', 'sideHigh', 'dropIn', 'dropIn']),                         // 9
-  S('平頂山', 'grid', [], ['topLoop', 'diag', 'diag', 'spiral', 'zig'], ['horn', 'bone']),                      // 10
-  S('盤絲洞', 'wave', ['swarm'], ['zig', 'loopBig', 'loopBig', 'spiral', 'spiral']),                            // 11
-  S('金兜山', 'v', ['armored'], ['top', 'side', 'side', 'diag', 'diag']),                                       // 12
-  C('瑤池', 2),                                                                                                 // 13
-  S('火焰山', 'arch', ['meteors', 'snipers'], ['dropIn', 'sideHigh', 'sideHigh', 'zig', 'zig']),                // 14
-  S('流沙河', 'wave', ['zigzag'], ['zig', 'diag', 'diag', 'spiral', 'spiral']),                                 // 15
-  S('通天河', 'grid', ['barrage'], ['topLoop', 'loopBig', 'loopBig', 'dropIn', 'dropIn']),                      // 16
-  S('獅駝嶺', 'v', ['kamikaze', 'escort'], ['top', 'side', 'side', 'spiral', 'zig']),                           // 17
-  C('蓬萊仙島', 3),                                                                                             // 18
-  S('無底洞', 'peak', ['beam', 'swarm'], ['zig', 'sideHigh', 'sideHigh', 'diag', 'diag']),                      // 19
-  S('小雷音寺', 'arch', ['snipers'], ['topLoop', 'loopBig', 'loopBig', 'spiral', 'spiral'], ['bone', 'bull']),  // 20
-  S('車遲國', 'wave', ['armored', 'meteors'], ['dropIn', 'side', 'side', 'zig', 'zig']),                        // 21
-  S('比丘國', 'v', ['snipers', 'zigzag'], ['top', 'sideHigh', 'sideHigh', 'spiral', 'diag']),                   // 22
-  C('廣寒宮', 4),                                                                                               // 23
-  S('黃風嶺', 'grid', ['barrage', 'swarm'], ['zig', 'loopBig', 'loopBig', 'dropIn', 'spiral']),                 // 24
-  S('寶象國', 'arch', ['kamikaze', 'armored'], ['topLoop', 'diag', 'diag', 'zig', 'zig']),                      // 25
-  S('翠雲山', 'wave', ['meteors2', 'beam'], ['dropIn', 'sideHigh', 'sideHigh', 'spiral', 'spiral']),            // 26
-  S('真假美猴王', 'peak', ['snipers', 'zigzag', 'escort'], ['zig', 'loopBig', 'loopBig', 'diag', 'diag']),      // 27
-  C('天竺', 5),                                                                                                 // 28
-  S('凌雲渡', 'v', ['barrage', 'armored', 'swarm'], ['top', 'side', 'side', 'spiral', 'zig']),                  // 29
-  S('大雷音寺', 'grid', ['snipers', 'zigzag', 'meteors'], ['topLoop', 'loopBig', 'loopBig', 'spiral', 'spiral'], ['bull', 'bone', 'horn']), // 30
-];
-/** 每一關的場景(palette.js THEMES):0 花果山 1 天宮 2 水墨 3 火焰山 4 流沙河 5 雪山 6 盤絲洞 */
-export const STAGE_THEME = [0, 0, 1, 1, 3, 2, 6, 0, 1, 2, 6, 5, 1, 3, 4, 4, 2, 0, 6, 1, 5, 2, 6, 4, 5, 3, 2, 1, 4, 1];
+export const TWISTS = Object.fromEntries(Object.entries(TWIST_APPLY).map(([k, v]) => [k, { ...v, hint: TWIST_HINTS[k] || '' }]));
+
 export const stageTheme = (n) => STAGE_THEME[(n - 1) % MAX_STAGE];
 export const isChallenge = (n) => STAGE_TABLE[(n - 1) % MAX_STAGE].challenge !== undefined;
 

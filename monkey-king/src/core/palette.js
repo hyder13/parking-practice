@@ -62,7 +62,7 @@ export const PAL = {
 };
 
 /**
- * 場景主題(雲海底色 / 墨線 / 仙山 / 雲 / 光線 + 會捲過去的東西)。每關用 config.js 的 STAGE_THEME 指定。
+ * 場景主題(雲海底色 / 墨線 / 仙山 / 雲 / 光線 + 會捲過去的東西)。每關用 stages.js 的 STAGE_THEME 指定。
  *   peaks / cranes / petals / clouds:每 100 單位飛行距離大約出現幾個
  *   petal:飄落物的顏色(桃花 / 金光 / 火星 / 雪 / 螢火)
  */

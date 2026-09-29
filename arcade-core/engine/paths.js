@@ -1,4 +1,4 @@
-import { BOTTOM_OUT, PLAYER_Y, DY_TOP, TOP_SPAWN } from './config.js';
+import { BOTTOM_OUT, PLAYER_Y, DY_TOP, TOP_SPAWN } from './field.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

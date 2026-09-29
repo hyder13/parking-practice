@@ -1,7 +1,7 @@
 // Adapted from Kenton-GMI/sakura-crossing (MIT) src/core/post.js
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { PAL } from './palette.js';
+import { PAL } from '@skin/core/palette.js';
 
 /* ------------------------------------------------------------------ *
  * The 3D-to-2D pipeline.

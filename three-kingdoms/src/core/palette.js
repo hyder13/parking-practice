@@ -63,7 +63,7 @@ export const PAL = {
 };
 
 /**
- * 戰場主題(草地兩色 / 道路 / 江水 / 樹 / 光線 + 會捲過去的東西)。每關用 config.js 的 STAGE_THEME 指定。
+ * 戰場主題(草地兩色 / 道路 / 江水 / 樹 / 光線 + 會捲過去的東西)。每關用 stages.js 的 STAGE_THEME 指定。
  *   trees / camps / petals / clouds / rocks:每 100 單位行軍距離大約出現幾個
  *   river:0 = 沒有江、1 = 畫面中有一條蜿蜒的江
  */

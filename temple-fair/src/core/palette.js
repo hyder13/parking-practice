@@ -62,7 +62,7 @@ export const PAL = {
 };
 
 /**
- * 遶境路線的場景。每站用 config.js 的 STAGE_THEME 指定。
+ * 遶境路線的場景。每站用 stages.js 的 STAGE_THEME 指定。
  *   deep / sea:街道兩側的地面(town = 屋頂群、paddy = 稻田、harbor = 海水)
  *   road / grout:街道石板 / 紅磚與磚縫
  *   houses / temples / stalls / lanterns / petals / clouds:每 100 單位路程大約出現幾個

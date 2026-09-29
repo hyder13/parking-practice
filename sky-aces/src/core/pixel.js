@@ -1,8 +1,9 @@
 /* ------------------------------------------------------------------ *
  * HUD 用的點陣小圖(剩餘戰機、關卡旗):字元陣列 → canvas → dataURL。
  * 顯示時加 CSS image-rendering: pixelated,保留原作的像素顆粒感。
+ * 這裡只放圖;轉成圖片的程式在 arcade-core/ui/sprite.js。
  * ------------------------------------------------------------------ */
-const COLORS = {
+export const COLORS = {
   w: '#eef0f4', r: '#e8322e', b: '#2a4fa8', c: '#8fe0ff', y: '#ffd23a', o: '#d8663a', k: '#2a2d34', g: '#6f9f3a',
   p: '#a05ce8', n: '#6a3a22', s: '#8fa0bf', d: '#4a5670',
 };
@@ -98,19 +99,3 @@ export const SPRITES = {
     '..cc..',
   ],
 };
-
-const cache = new Map();
-export function spriteURL(name) {
-  if (cache.has(name)) return cache.get(name);
-  const rows = SPRITES[name];
-  const c = document.createElement('canvas');
-  c.width = rows[0].length; c.height = rows.length;
-  const g = c.getContext('2d');
-  rows.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (ch === '.') return;
-    g.fillStyle = COLORS[ch]; g.fillRect(x, y, 1, 1);
-  }));
-  const url = c.toDataURL();
-  cache.set(name, url);
-  return url;
-}

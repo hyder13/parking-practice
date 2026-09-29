@@ -1,12 +1,15 @@
 import * as THREE from 'three';
-import { PAL } from '../core/palette.js';
-import { FW, FH, PLAYER_Y, TOP_SPAWN, BOTTOM_OUT, ROWS, ROW0, DY_TOP, slotOf, SCORE, EXTRA_LIFE, MAX_STAGE, TWISTS, stageCfg } from './config.js';
+import { PAL } from '@skin/core/palette.js';
+import { FW, FH, PLAYER_Y, TOP_SPAWN, BOTTOM_OUT, ROWS, ROW0, DY_TOP, slotOf, SCORE, EXTRA_LIFE, MAX_STAGE, TWISTS, stageCfg } from './field.js';
 import { Path, ENTRY, diveBee, diveBfly, diveBoss, diveBeam, exitDown, weave, meteorPath } from './paths.js';
-import { spawnModel, spinProps, flapWings, shotBatch, enemyShotBatch, armorize, unarmor, BOSS_HIT_SWAP, SHIP_LV, ITEMS } from './models.js';
-import { BigBoss, BOSS_INFO } from './boss.js';
+import { armorize, unarmor, squash, elasticOut } from './kit.js';
+import { spawnModel, spinProps, flapWings, shotBatch, enemyShotBatch, BOSS_HIT_SWAP, SHIP_LV, ITEMS } from '@skin/game/models.js';
+import { BigBoss, BOSS_INFO } from '@skin/game/boss.js';
+import { TEXT, FEEL } from '@skin/skin.js';
 
 /* ------------------------------------------------------------------ *
- * 遊戲規則(純邏輯 + 擺放模型),畫面 / 聲音 / HUD 透過 hooks 交給 main.js。
+ * 遊戲規則(純邏輯 + 擺放模型),畫面 / 聲音 / HUD 透過 hooks 交給 main.js。所有換皮共用:
+ * 模型 / BOSS / 背景 / 文字 / 手感從各遊戲的 @skin(src/)拿,介面見 arcade-core/CLAUDE.md。
  *
  * phase:title → intro → play → warn → boss → (clear | result) → intro … ;死光 → over → ended
  * 敵人 state:
@@ -40,7 +43,7 @@ export const COLORS = {
   steel: [0x9aa4c0, 0xffffff, 0xcfd6ea],
 };
 
-const DUAL_DX = 1.15;          // 雙機:第二台在右邊多遠
+const DUAL_DX = FEEL.dualDx;   // 雙機:第二台在右邊多遠
 const SHOT_SPEED = 34;
 const HIT_R = { bee: 0.78, bfly: 0.82, boss: 0.95, rock: 0.95 };
 const CAPTIVE_OFF = 1.25;      // 被抓的戰機掛在王身後多遠
@@ -66,13 +69,8 @@ export const MAX_POWER = PATTERNS.length - 1;
 export const EVO_XP = [0, 10, 35, 80, 150, 250, 400, 600, 850, 1150];
 // 從檢查點開始時,依關卡給大約應有的進化等級(第 n 關之前能累積的擊墜數)
 const EVO_AT_STAGE = [1, 2, 3, 4, 6, 9, 12, 16, 20, 24];
-const PRAISE = [[5, '好!', 'cyan'], [10, '妙哉!', 'cyan'], [20, '厲害!', 'yellow'], [35, '神通廣大!', 'yellow'],
-  [50, '法力無邊!', 'red'], [75, '天下無敵!', 'red'], [100, '齊天大聖!', 'red']];
-export const ACH = {
-  firstBoss: '降妖除魔', combo10: '連擊 x10', combo50: '連擊宗師', evo5: '齊天大聖', evo10: '鬥戰勝佛',
-  power: '法力無邊', rescue: '身外身法', noMiss5: '無傷 x5', perfect: '一網打盡',
-  stage10: '渡過十難', stage20: '渡過二十難', stage30: '功德圓滿',
-};
+const PRAISE = TEXT.praise;     // [[連擊數, 字, 顏色], ...]
+export const ACH = TEXT.ach;
 
 /** 排氣火焰 / 凝結尾 / 火箭尾焰:以樣板的長度為基準隨機閃爍 */
 function flicker(flames, k = 1) {
@@ -129,7 +127,7 @@ export class Game {
     if (this.shipEvo === evo) return;
     const keep = this.ship && { vis: this.ship.root.visible, vis2: this.ship2.root.visible };
     if (this.ship) this.scene.remove(this.ship.root, this.ship2.root);
-    this.ship = spawnModel(`ship${evo}`); this.ship2 = spawnModel(`ship${evo}`);
+    this.ship = spawnModel(`ship${evo}`); this.ship2 = spawnModel(`${FEEL.ally}${evo}`); // 雙機:第二台(可以是另一個角色)
     this.scene.add(this.ship.root, this.ship2.root);
     this.ship.root.visible = keep ? keep.vis : false; this.ship2.root.visible = keep ? keep.vis2 : false;
     this.shipEvo = evo;
@@ -195,11 +193,11 @@ export class Game {
     this.phase = 'intro'; this.phaseT = 0;
     this.introDur = first ? 3.8 : 2.4;
     // 開場:關卡編號 + 這關的名字 + 機制提示(每關不一樣,玩家一看就知道這關要注意什麼)
-    const hint = cfg.kind === 'challenge' ? '這一關妖怪不會攻擊,盡量全部打下來!' : cfg.twists.map((k) => TWISTS[k].hint).join(' / ');
-    this.introLines = [[`第 ${this.stageN} 難`, 'cyan cjk'], [cfg.name, 'yellow cjk big'], ...(hint ? [[hint, 'white hint']] : []),
+    const hint = cfg.kind === 'challenge' ? TEXT.challengeHint : cfg.twists.map((k) => TWISTS[k].hint).join(' / ');
+    this.introLines = [...TEXT.intro(this.stageN, cfg.name), ...(hint ? [[hint, 'white hint']] : []),
       [this.stageN <= MAX_STAGE ? `${this.stageN} / ${MAX_STAGE}` : 'EXTRA', 'white small']];
     this.introMsg = first;
-    if (first) this.h.msg([['取經路上', 'cyan cjk'], ['PLAYER 1', 'white small']], 1.5);
+    if (first) this.h.msg(TEXT.first, 1.5);
     else this.h.msg(this.introLines, 2.4);
     this.h.sfx(first ? 'start' : cfg.kind === 'challenge' ? 'challenge' : 'stage');
     this.h.stage(this.stageN);
@@ -298,7 +296,7 @@ export class Game {
         this.reinfLeft--;
         this.addWaves(this.cfg.waves, new Set(this.enemies.filter((e) => e.slot).map((e) => e.slot.id)));
         this.form.breathe = 0;
-        this.h.msg([['妖兵增援 !', 'red cjk']], 1.4);
+        this.h.msg(TEXT.reinforce, 1.4);
       }
       return;
     }
@@ -346,7 +344,7 @@ export class Game {
           this.big.update(dt);
           if (this.big.done) {
             const escaped = this.big.escaped;
-            if (escaped) { this.big.remove(); this.h.feed('蟠桃飛走了…', 'white'); }
+            if (escaped) { this.big.remove(); this.h.feed(TEXT.goldEscaped, 'white'); }
             this.big = null; this.h.bossBar(null);
             if (!escaped && this.bossQueue.length) this.bossWarn(true); // 連戰:下一隻
             else if (this.cfg.kind === 'challenge') { this.phase = 'result'; this.phaseT = 0; this.resultStep = 0; }
@@ -388,11 +386,11 @@ export class Game {
     const gold = this.cfg.kind === 'challenge';
     const info = BOSS_INFO[this.bossQueue[0]];
     if (next) {
-      this.h.msg([['又一個大妖!', 'red blink cjk'], [info.name, 'white cjk big']], 1.4);
+      this.h.msg(TEXT.nextBoss(info.name), 1.4);
       this.h.sfx('warning');
       return;
     }
-    this.h.msg(gold ? [['蟠桃出現 !', 'yellow blink cjk'], [info.name, 'white cjk big']] : [['WARNING', 'red blink'], ['妖氣沖天', 'red cjk'], [info.name, 'white cjk big']], 2.0);
+    this.h.msg(TEXT.bossAppear(info.name, gold), 2.0);
     this.h.sfx(gold ? 'challenge' : 'warning');
     this.h.vibrate(80);
   }
@@ -424,7 +422,7 @@ export class Game {
     const stars = 1 + (S.deaths === 0 ? 1 : 0) + (S.deaths === 0 && S.maxCombo >= 8 ? 1 : 0);
     const bonus = stars * 500 * (1 + Math.floor(n / 10));
     this.phase = 'clear'; this.phaseT = 0;
-    this.h.msg([[`第 ${n} 難 渡過 !`, 'yellow cjk big'], ['★'.repeat(stars) + '☆'.repeat(3 - stars), 'yellow stars'],
+    this.h.msg([TEXT.clear(n), ['★'.repeat(stars) + '☆'.repeat(3 - stars), 'yellow stars'],
       [`${S.deaths === 0 ? 'NO MISS  ' : ''}BONUS ${bonus}`, 'white']], this.stageN < 10 ? 2.5 : 3.1);
     this.addScore(bonus);
     this.h.sfx('clear', stars);
@@ -436,7 +434,7 @@ export class Game {
   }
 
   nextStage() {
-    if (this.stageN === MAX_STAGE) this.h.feed('三十難全部渡過!功德圓滿', 'yellow');
+    if (this.stageN === MAX_STAGE) this.h.feed(TEXT.allClear, 'yellow');
     this.stageN++;
     this.beginStage(false);
   }
@@ -489,14 +487,14 @@ export class Game {
     }
   }
 
-  /** 妖火石:斜斜穿過場地,打 2 下才破,撞到會死 */
+  /** 隕石類障礙物(火箭 / 巨石 / 鬼火…):斜斜穿過場地,打 2 下才破,撞到會死 */
   spawnRock() {
     const e = this.makeEnemy('rock', null);
     e.hazard = true; e.hp = 2; e.mdl.root.visible = true;
     e.path = new Path(meteorPath()); e.d = 0; e.speed = rand(7, 10) * (1 + this.cfg.t * 0.5);
     e.state = 'fly'; e.path.at(0, e);
     const s = rand(0.9, 1.2); e.mdl.rig.scale.setScalar(s); e.r = 0.85 * s;
-    e.spin = [rand(-3, 3), rand(-3, 3)]; // 滾著飛過來
+    e.spin = FEEL.rockSpin(); // [繞 x, 繞 y] 每秒轉幾弧度
     this.h.sfx('rocket');
   }
 
@@ -627,7 +625,7 @@ export class Game {
       case 'home': {
         const [tx, ty] = this.slotPos(e.slot);
         const dx = tx - e.x, dy = ty - e.y, dist = Math.hypot(dx, dy);
-        if (dist < 0.06) { e.state = 'form'; e.x = tx; e.y = ty; break; }
+        if (dist < 0.06) { e.state = 'form'; e.x = tx; e.y = ty; e.sq = this.clock; break; } // 到位時 Q 彈一下
         const sp = Math.min(e.homeSpeed, 2 + dist * 5);
         if (dist < 1.3) {
           const st = Math.min(dist, sp * dt); e.x += dx / dist * st; e.y += dy / dist * st;
@@ -664,11 +662,17 @@ export class Game {
     this.enemyFire(e);
 
     const { root, rig } = e.mdl;
-    root.position.set(e.x, e.y, Math.sin(e.flap * 0.35) * 0.12);
-    root.rotation.z = e.ang;
+    // 上下起伏(飛行的浮動 / 走路的彈跳),每款自己定
+    const hop = FEEL.hop(e);
+    root.position.set(e.x, e.y, hop);
+    // 立體書人偶不跟著方向轉(臉才不會倒過來),只依水平速度左右傾
+    root.rotation.z = e.mdl.upright ? clamp(-e.vx * 0.025, -0.35, 0.35) : e.ang;
+    if (e.mdl.shadow) e.mdl.shadow.position.z = -FEEL.groundZ + 0.04 - hop;
+    if (FEEL.popup) squash(root, this.clock - (e.sq ?? -9));
     flicker(e.mdl.flames);
     if (e.hazard) { rig.rotation.x += e.spin[0] * dt; rig.rotation.y += e.spin[1] * dt; return; }
-    rig.rotation.y = e.roll;
+    rig.rotation.y = e.mdl.upright ? e.roll * 0.3 : e.roll;
+    spinProps(e.mdl, dt);
     flapWings(e.mdl, e.flap);
   }
 
@@ -740,6 +744,7 @@ export class Game {
         for (const m of e.mdl.meshes) { const s = BOSS_HIT_SWAP.get(m.material); if (s) m.material = s; }
         this.h.explode(e.x, e.y, COLORS.boss, { n: 6, life: 0.35 });
       } else this.h.explode(e.x, e.y, COLORS[e.type], { n: 5, life: 0.3 });
+      e.sq = this.clock; // 被打中:壓扁彈回
       this.h.sfx('bossHit');
       return;
     }
@@ -803,7 +808,7 @@ export class Game {
     this.setShipModels(P.evo);
     const lv = SHIP_LV[P.evo - 1];
     this.h.explode(P.x, P.y, [lv.body, lv.accent, lv.pod, 0xffffff], { big: true, n: 26 });
-    this.tag('修為提升 !', 'yellow');
+    this.tag(TEXT.promote, 'yellow');
     this.h.evolved();
     this.h.sfx('levelUp');
     this.slow(0.45, 0.45);
@@ -838,7 +843,7 @@ export class Game {
     if (this.items.length >= 10) return;
     const m = spawnModel(`item_${kind}`);
     m.root.position.set(x, y, 0.4); this.scene.add(m.root);
-    this.items.push({ kind, m, x, y, t: Math.random() * 6, vy: 2.4 });
+    this.items.push({ kind, m, x, y, t: Math.random() * 6, vy: 2.4, pop: 0 });
     if (kind === 'P') this.gotFirstP = true;
   }
 
@@ -858,7 +863,8 @@ export class Game {
       it.x = clamp(it.x, -FW / 2 + 0.6, FW / 2 - 0.6);
       const { root, rig, halo } = it.m;
       root.position.set(it.x, it.y, 0.4);
-      rig.rotation.z = Math.sin(it.t * 2.4) * 0.28; // 掛在降落傘下面晃
+      if (FEEL.popup) { it.pop += dt; root.scale.setScalar(elasticOut(it.pop / 0.5)); } // 彈出來
+      rig.rotation.z = Math.sin(it.t * 2.4) * 0.28;
       if (halo) { halo.rotation.x = 0.35; halo.rotation.z = it.t * 3; halo.scale.setScalar(1 + Math.sin(it.t * 6) * 0.08); }
       root.visible = it.y > BOTTOM_OUT + 3 || Math.floor(it.t * 8) % 2 === 0;
       if (got) { this.applyItem(it.kind, it.x, it.y); this.scene.remove(root); this.items.splice(i, 1); }
@@ -868,20 +874,21 @@ export class Game {
 
   applyItem(kind, x, y) {
     const P = this.player, it = ITEMS[kind];
+    this.playerSq = this.clock;
     this.h.explode(x, y, [it.color, 0xffffff], { n: 10, life: 0.4 });
     this.h.sfx('pickup');
     this.h.vibrate(20);
     if (kind === 'P') {
       if (P.w < MAX_POWER) {
         P.w++;
-        this.tag(P.w === MAX_POWER ? '法力 MAX' : `法力 Lv.${P.w}`, 'red');
+        this.tag(TEXT.power(P.w, P.w === MAX_POWER), 'red');
         this.h.sfx('powerUp');
         if (P.w === MAX_POWER) this.achieve('power');
       } else { this.addScore(1000); this.h.popup(x, y, 1000, 'yellow'); }
-    } else if (kind === 'R') { P.rapidT = 8; this.tag('疾風', 'cyan'); }
-    else if (kind === 'S') { P.shieldT = 10; this.tag('金光罩', 'green'); this.h.sfx('shield'); }
+    } else if (kind === 'R') { P.rapidT = 8; this.tag(TEXT.rapid, 'cyan'); }
+    else if (kind === 'S') { P.shieldT = 10; this.tag(TEXT.shield, 'green'); this.h.sfx('shield'); }
     else if (kind === 'B') this.bomb();
-    else if (kind === 'L') { P.lives++; this.tag('蟠桃 1UP', 'yellow'); this.h.sfx('extra'); this.pushHUD(); }
+    else if (kind === 'L') { P.lives++; this.tag(TEXT.oneUp, 'yellow'); this.h.sfx('extra'); this.pushHUD(); }
     else if (kind === 'W') this.callWingman(x, y);
     this.pushStatus();
   }
@@ -890,11 +897,11 @@ export class Game {
   callWingman(x, y) {
     const P = this.player;
     if (P.dual || this.rescue) { this.addScore(1000); this.h.popup(x, y, 1000, 'yellow'); return; }
-    const m = spawnModel(`ship${P.evo}`);
+    const m = spawnModel(`${FEEL.ally}${P.evo}`);
     const sx = clamp(P.x + DUAL_DX, -FW / 2 + 1, FW / 2 - 1);
     m.root.position.set(sx, BOTTOM_OUT, 0); this.scene.add(m.root);
     this.rescue = { m, x: sx, y: BOTTOM_OUT, t: 1.1, mode: 'rescue' };
-    this.tag('身外身 !', 'cyan');
+    this.tag(TEXT.wingman, 'cyan');
     this.achieve('rescue');
   }
 
@@ -1002,7 +1009,7 @@ export class Game {
       P.dual = true;
       this.scene.remove(root); this.rescue = null;
       this.h.sfx('rescued');
-      this.tag('分身合體', 'cyan');
+      this.tag(TEXT.dual, 'cyan');
     }
   }
 
@@ -1035,15 +1042,36 @@ export class Game {
     const blink = P.inv > 0 && Math.floor(P.inv * 12) % 2 === 0;
     const show = (P.state === 'play' && !blink) || P.state === 'capturing';
     const S = this.ship, S2 = this.ship2;
-    // 翻筋斗:機頭往鏡頭方向拉起翻一整圈,同時爬高(z)再落回來
     const lk = P.loopT > 0 ? 1 - P.loopT / LOOP_DUR : 0, lz = Math.sin(lk * Math.PI);
     S.root.visible = show;
-    if (P.state === 'play') S.root.position.set(P.x, P.y + lz * 1.2, lz * 4.5);
-    S.rig.rotation.y = P.state === 'play' ? P.roll : 0;
-    S.rig.rotation.x = -lk * Math.PI * 2;
     S2.root.visible = P.state === 'play' && P.dual && !blink;
-    S2.root.position.set(P.x + DUAL_DX, P.y + lz * 1.2, lz * 4.5);
-    S2.rig.rotation.y = P.roll; S2.rig.rotation.x = -lk * Math.PI * 2;
+    let jz;
+    if (FEEL.dodge === 'flip') {
+      // 翻筋斗:機頭往鏡頭方向拉起翻一整圈,同時爬高(z)再落回來
+      jz = lz * 4.5;
+      if (P.state === 'play') S.root.position.set(P.x, P.y + lz * 1.2, jz);
+      S.rig.rotation.y = P.state === 'play' ? P.roll : 0;
+      S.rig.rotation.x = -lk * Math.PI * 2;
+      S2.root.position.set(P.x + DUAL_DX, P.y + lz * 1.2, jz);
+      S2.rig.rotation.y = P.roll; S2.rig.rotation.x = -lk * Math.PI * 2;
+    } else {
+      // 跳躍(躍馬 / 風火輪…):往鏡頭方向高高跳起再落地、身體前傾;平常走路一顛一顛
+      const [gf, ga] = FEEL.gait;
+      jz = lz * 4.2 + (P.state === 'play' ? Math.abs(Math.sin(this.clock * gf)) * ga : 0);
+      if (P.state === 'play') S.root.position.set(P.x, P.y + lz * 0.8, jz);
+      S.rig.rotation.y = P.state === 'play' ? P.roll * 0.5 : 0;
+      S.rig.rotation.x = -Math.sin(lk * Math.PI) * 0.55;
+      S2.root.position.set(P.x + DUAL_DX, P.y + lz * 0.8, jz);
+      S2.rig.rotation.y = P.roll * 0.5; S2.rig.rotation.x = S.rig.rotation.x;
+    }
+    // 地面上的影子(只有立體書 / 地面系列的模型有):留在地上、跳越高越小
+    for (const m of [S, S2]) {
+      if (!m.shadow) continue;
+      m.shadow.position.z = -FEEL.groundZ + 0.04 - jz;
+      const k = 1 - lz * 0.45, [bx, by] = m.shadow.userData.base; m.shadow.scale.set(bx * k, by * k, 1);
+      squash(m.root, this.clock - (this.playerSq ?? -9), 0.8);
+      flapWings(m, this.clock * 7);
+    }
     flicker(S.flames, 1 + Math.max(0, P.vy) * 0.03); flicker(S2.flames, 1 + Math.max(0, P.vy) * 0.03);
     const pk = 1 + Math.max(0, P.vy) * 0.03;
     for (const m of [S, S2]) {

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PAL } from '../core/palette.js';
-import { cel, flat } from '../core/toon.js';
+import { cel, flat } from '@arcade/render/toon.js';
+import { geoAt, Batch, armorize, unarmor, squash, elasticOut } from '@arcade/engine/kit.js';
 
 /* ------------------------------------------------------------------ *
  * 所有飛機都用基本幾何體拼出來(沒有模型檔)。
@@ -403,23 +404,6 @@ function rocketTemplate() {
   });
 }
 
-/** 裝甲關:敵人換成偏鋼灰的材質,裝甲打掉後換回原色 */
-const armorCache = new Map();
-const STEEL = new THREE.Color(0x9aa4c0);
-export function armorize(mdl) {
-  mdl.orig = mdl.meshes.map((m) => m.material);
-  mdl.meshes.forEach((m) => {
-    const src = m.material;
-    if (!src.isMeshToonMaterial) return;
-    if (!armorCache.has(src)) armorCache.set(src, cel({ color: src.color.clone().lerp(STEEL, 0.6).getHex(), bands: 2 }));
-    m.material = armorCache.get(src);
-  });
-}
-export function unarmor(mdl) {
-  if (mdl.orig) mdl.meshes.forEach((m, i) => { m.material = mdl.orig[i]; });
-  mdl.orig = null;
-}
-
 const TEMPLATES = {
   bee: template(fighterBody, 1.0, fighterExtras),
   bfly: template(bomberBody, 1.0, bomberExtras),
@@ -455,6 +439,7 @@ export function spawnModel(type) {
 }
 /** 螺旋槳轉動(每幀呼叫) */
 export function spinProps(mdl, dt, k = 1) { for (const p of mdl.props) p.rotation.y += dt * 38 * k; }
+export function flapWings() {}
 export const FLASH_MAT = flat({ color: 0xffffff });
 
 /* ---------------- 道具:降落傘補給箱 ----------------
@@ -524,27 +509,6 @@ const SHOT_TIP = flat({ color: PAL.shotTip, transparent: true, depthWrite: false
 const EB_MAT = flat({ color: PAL.ebullet, transparent: true, depthWrite: false });
 const EB_CORE = flat({ color: PAL.ebulletCore, transparent: true, depthWrite: false });
 
-function geoAt(geo, pos, scl) {
-  const g = geo.clone(); g.scale(...scl); g.translate(...pos); return g;
-}
-export class Batch {
-  constructor(scene, parts, cap) {
-    this.meshes = parts.map(([geo, mat]) => {
-      const m = new THREE.InstancedMesh(geo, mat, cap);
-      m.count = 0; m.frustumCulled = false; m.renderOrder = 2;
-      scene.add(m); return m;
-    });
-    this.cap = cap; this.n = 0; this.o = new THREE.Object3D();
-  }
-  begin() { this.n = 0; }
-  add(x, y, z, rz, s = 1) {
-    if (this.n >= this.cap) return;
-    const o = this.o; o.position.set(x, y, z); o.rotation.set(0, 0, rz); o.scale.setScalar(s); o.updateMatrix();
-    for (const m of this.meshes) m.setMatrixAt(this.n, o.matrix);
-    this.n++;
-  }
-  end() { for (const m of this.meshes) { m.count = this.n; m.instanceMatrix.needsUpdate = true; } }
-}
 /** 玩家:機槍曳光彈(細長黃色 + 橘色彈頭) */
 export function shotBatch(scene, cap) {
   return new Batch(scene, [
@@ -559,3 +523,5 @@ export function enemyShotBatch(scene, cap) {
     [geoAt(GEO.ico0, [0, 0.02, 0.08], [0.09, 0.12, 0.09]), EB_CORE],
   ], cap);
 }
+
+export { armorize, unarmor, squash, elasticOut };

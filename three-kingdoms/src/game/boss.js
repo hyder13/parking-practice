@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PAL } from '../core/palette.js';
-import { FW, ROW0, TOP_SPAWN, BOTTOM_OUT } from './config.js';
+import { FW, ROW0, TOP_SPAWN, BOTTOM_OUT } from '@arcade/engine/field.js';
 import { spawnModel, flapWings, squash, GROUND_Z, FLASH_MAT } from './models.js';
 
 /* ------------------------------------------------------------------ *

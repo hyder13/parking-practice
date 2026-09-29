@@ -1,6 +1,6 @@
 # Third-party notices
 
-`../arcade-core/render/toon.js` and `../arcade-core/render/post.js` (shared engine) are adapted from
+`render/toon.js` and `render/post.js` are adapted from
 [Kenton-GMI/sakura-crossing](https://github.com/Kenton-GMI/sakura-crossing),
 which is distributed under the following license:
 

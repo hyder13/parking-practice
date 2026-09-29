@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { THEMES } from '../core/palette.js';
-import { cel, flat } from '../core/toon.js';
+import { cel, flat } from '@arcade/render/toon.js';
 import { GROUND_Z, bannerTex, elasticOut } from './models.js';
 
 /* ------------------------------------------------------------------ *

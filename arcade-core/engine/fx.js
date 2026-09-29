@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { PAL } from '../core/palette.js';
-import { flat } from '../core/toon.js';
+import { PAL } from '@skin/core/palette.js';
+import { flat } from '../render/toon.js';
 
 /* ------------------------------------------------------------------ *
  * 特效:爆炸(像素方塊碎片 + 衝擊環)、牽引光束。

@@ -33,7 +33,7 @@ npm run build    # → dist/
 | 雷射音效 | 機槍「噠噠」、俯衝呼嘯、引擎低吼、軍號出擊曲(全部 WebAudio 合成,原創旋律) |
 
 ## 30 個任務
-關卡表在 `src/game/config.js` 的 `STAGE_TABLE`,每關的天候 = `THEMES[(n-1) % 7]`。
+關卡表在 `src/game/stages.js` 的 `STAGE_TABLE`,每關的天候 = `THEMES[(n-1) % 7]`。
 
 | # | 名稱 | 機制 | # | 名稱 | 機制 |
 |---|---|---|---|---|---|

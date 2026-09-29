@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { THEMES } from '../core/palette.js';
-import { cel, flat } from '../core/toon.js';
+import { cel, flat } from '@arcade/render/toon.js';
 
 /* ------------------------------------------------------------------ *
  * 背景:從雲端往下看的水墨仙境(類別名稱沿用 Sea,main.js 不用改)。

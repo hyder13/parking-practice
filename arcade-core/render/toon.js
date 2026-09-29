@@ -1,6 +1,6 @@
 // Adapted from Kenton-GMI/sakura-crossing (MIT) src/core/toon.js
 import * as THREE from 'three';
-import { PAL } from './palette.js';
+import { PAL } from '@skin/core/palette.js';
 
 /* ------------------------------------------------------------------ *
  * Cel shading

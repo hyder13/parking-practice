@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PAL } from '../core/palette.js';
-import { cel, flat } from '../core/toon.js';
+import { cel, flat } from '@arcade/render/toon.js';
+import { geoAt, Batch, armorize, unarmor, squash, elasticOut } from '@arcade/engine/kit.js';
 
 /* ------------------------------------------------------------------ *
  * 所有角色都用基本幾何體拼出來(沒有模型檔),Q 版大頭比例、紙藝 / 黏土的圓潤感。
@@ -420,23 +421,6 @@ function rockTemplate() {
   return root;
 }
 
-/** 裝甲關:敵人換成偏鋼灰的材質,裝甲打掉後換回原色 */
-const armorCache = new Map();
-const STEEL = new THREE.Color(0x9aa4c0);
-export function armorize(mdl) {
-  mdl.orig = mdl.meshes.map((m) => m.material);
-  mdl.meshes.forEach((m) => {
-    const src = m.material;
-    if (!src.isMeshToonMaterial) return;
-    if (!armorCache.has(src)) armorCache.set(src, cel({ color: src.color.clone().lerp(STEEL, 0.6).getHex(), bands: 2 }));
-    m.material = armorCache.get(src);
-  });
-}
-export function unarmor(mdl) {
-  if (mdl.orig) mdl.meshes.forEach((m, i) => { m.material = mdl.orig[i]; });
-  mdl.orig = null;
-}
-
 const TEMPLATES = {
   bee: template(imp, 1.3, null, { shadow: [0.45, 0.35], upright: true }),
   bfly: template(jiangshi, 1.3, (rig) => addFlag(rig, [-0.45, 0.25, 0.5], '符', '#c8a02a', 0.5), { shadow: [0.45, 0.35], upright: true }),
@@ -476,21 +460,6 @@ export function spinProps() {}
 /** 旗子飄動(沿用 flapWings 的呼叫點:t = 動畫相位) */
 export function flapWings(mdl, t) {
   for (const f of mdl.flags) f.rotation.y = Math.sin(t * 0.8 + f.userData.ph) * 0.35;
-}
-/**
- * Q 彈壓扁回饋(Squash & Stretch):te = 觸發後經過的秒數,k = 力道。
- * 往下壓扁再彈回來,體積大致守恆(寬變大、高變小)。
- */
-export function squash(root, te, k = 1) {
-  if (te < 0 || te > 0.7) { root.scale.set(1, 1, 1); return; }
-  const a = Math.exp(-te * 7) * Math.sin(te * 22) * 0.22 * k;
-  root.scale.set(1 + a, 1 - a, 1 - a * 1.3);
-}
-/** 彈性出場(0 → 1,略微超過再回來) */
-export function elasticOut(t) {
-  if (t <= 0) return 0.001;
-  if (t >= 1) return 1;
-  return Math.pow(2, -9 * t) * Math.sin((t - 0.1) * 5 * Math.PI) + 1;
 }
 export const FLASH_MAT = flat({ color: 0xffffff });
 
@@ -558,27 +527,6 @@ const SHOT_TIP = flat({ color: PAL.shotTip, transparent: true, depthWrite: false
 const EB_MAT = flat({ color: PAL.ebullet, transparent: true, depthWrite: false });
 const EB_CORE = flat({ color: PAL.ebulletCore, transparent: true, depthWrite: false });
 
-function geoAt(geo, pos, scl) {
-  const g = geo.clone(); g.scale(...scl); g.translate(...pos); return g;
-}
-export class Batch {
-  constructor(scene, parts, cap) {
-    this.meshes = parts.map(([geo, mat]) => {
-      const m = new THREE.InstancedMesh(geo, mat, cap);
-      m.count = 0; m.frustumCulled = false; m.renderOrder = 2;
-      scene.add(m); return m;
-    });
-    this.cap = cap; this.n = 0; this.o = new THREE.Object3D();
-  }
-  begin() { this.n = 0; }
-  add(x, y, z, rz, s = 1) {
-    if (this.n >= this.cap) return;
-    const o = this.o; o.position.set(x, y, z); o.rotation.set(0, 0, rz); o.scale.setScalar(s); o.updateMatrix();
-    for (const m of this.meshes) m.setMatrixAt(this.n, o.matrix);
-    this.n++;
-  }
-  end() { for (const m of this.meshes) { m.count = this.n; m.instanceMatrix.needsUpdate = true; } }
-}
 /** 玩家:金色乾坤圈(面向鏡頭的圓環 + 中間一點亮光) */
 const RING_GEO = new THREE.TorusGeometry(0.2, 0.06, 6, 16);
 export function shotBatch(scene, cap) {
@@ -594,3 +542,5 @@ export function enemyShotBatch(scene, cap) {
     [geoAt(GEO.ico0, [0, 0.03, 0.08], [0.09, 0.11, 0.09]), EB_CORE],
   ], cap);
 }
+
+export { armorize, unarmor, squash, elasticOut };
