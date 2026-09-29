@@ -16,6 +16,8 @@
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/sky-aces/。
 - 同一個 repo 的 `monkey-king/` 是西遊記主題換皮(齊天大聖,見 monkey-king/CLAUDE.md),
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/monkey-king/。
+- 同一個 repo 的 `three-kingdoms/` 是三國主題換皮(三國英雄,見 three-kingdoms/CLAUDE.md),
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/three-kingdoms/。
 
 ## 授權邊界
 - 【使用者授權 2026-09-28】本專案 `git push` 到 origin main(= 自動部署 GitHub Pages 公開網站)不用再問;

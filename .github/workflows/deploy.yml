@@ -37,6 +37,10 @@ jobs:
       - run: npm ci && npm run build
         working-directory: monkey-king
       - run: cp -r monkey-king/dist dist/monkey-king
+      # 三國英雄(three-kingdoms/,三國主題換皮)→ /three-kingdoms/
+      - run: npm ci && npm run build
+        working-directory: three-kingdoms
+      - run: cp -r three-kingdoms/dist dist/three-kingdoms
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
