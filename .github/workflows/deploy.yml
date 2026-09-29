@@ -78,6 +78,10 @@ jobs:
         working-directory: yarn-land
       - run: cp -r yarn-land/dist dist/yarn-land
 
+      - run: npm ci && npm run build
+        working-directory: stained-glass
+      - run: cp -r stained-glass/dist dist/stained-glass
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

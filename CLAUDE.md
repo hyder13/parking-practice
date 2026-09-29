@@ -37,7 +37,9 @@
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/ink-wuxia/。
 - 同一個 repo 的 `yarn-land/` 是毛線娃娃 / 布偶世界換皮(毛線小世界,見 yarn-land/CLAUDE.md),材質帶針織紋、地面是布料,
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/yarn-land/。
-- 同一個 repo 的 `arcade-core/` 是上面所有換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku / cartoon-1930 / comic-hero / ink-wuxia / yarn-land)的共用引擎
+- 同一個 repo 的 `stained-glass/` 是教堂彩繪玻璃的童話騎士換皮(彩窗騎士,見 stained-glass/CLAUDE.md),地面是 Voronoi 玻璃 + 鉛條,
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/stained-glass/。
+- 同一個 repo 的 `arcade-core/` 是上面所有換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku / cartoon-1930 / comic-hero / ink-wuxia / yarn-land / stained-glass)的共用引擎
   (不是獨立專案,各款 vite.config.js 用 `@arcade` alias 引入;見 arcade-core/CLAUDE.md)。star-bees 不用它。
   改 arcade-core = 全部一起變 → 每款都要 build + 實測。
 
