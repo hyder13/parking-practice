@@ -14,27 +14,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bangers&display=swap" rel="stylesheet">
 <title>漫畫英雄 POW! COMIC HERO</title>
 <style>
-  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import);這裡只放這款的美漫樣式 */
-  :root{--loop-label:"飛";--loop-fs:1.25;--loop-bg:rgba(32,80,216,.6);
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import,比這裡晚載入 → 這裡的選擇器都加 html 提高優先權);這裡只放這款的美漫樣式 */
+  html:root{--loop-label:"飛";--loop-fs:1.25;--loop-bg:rgba(32,80,216,.6);
     --red:#ff3a3a;--cyan:#6ae8ff;--yellow:#ffe020;--white:#fffdf4;--bg:#101018;--line:#101018;--comic:Bangers,"Arial Black",Impact,sans-serif}
-  #crt{display:none!important} /* 新聞紙 / 套色偏移在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  html #crt{display:none!important} /* 新聞紙 / 套色偏移在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
   /* 標題:漫畫封面(黃色爆炸框 + 粗黑邊的字) */
-  #title .logo.big{font-family:var(--comic),var(--cjk);font-size:clamp(40px,14vw,76px);letter-spacing:.04em;background:none;color:#ffe020;
+  html #title .logo.big{font-family:var(--comic),var(--cjk);font-size:clamp(40px,14vw,76px);letter-spacing:.04em;background:none;color:#ffe020;
     -webkit-text-stroke:3px #101018;paint-order:stroke fill;filter:drop-shadow(5px 5px 0 #e8202a) drop-shadow(0 0 0 #101018);margin:.1em 0 0;transform:rotate(-4deg)}
-  .burst{display:inline-block;margin:.2em auto .1em;padding:.35em 1.1em .25em;font-family:var(--comic);font-size:clamp(22px,7vw,36px);letter-spacing:.06em;color:#101018;
+  html .burst{display:inline-block;margin:.2em auto .1em;padding:.35em 1.1em .25em;font-family:var(--comic);font-size:clamp(22px,7vw,36px);letter-spacing:.06em;color:#101018;
     background:#fff;clip-path:polygon(50% 0,61% 22%,85% 8%,78% 34%,100% 40%,80% 56%,96% 80%,70% 74%,62% 100%,48% 78%,30% 98%,28% 72%,2% 82%,16% 56%,0 36%,24% 32%,16% 6%,40% 20%);
     transform:rotate(6deg)}
-  .burst span{display:inline-block;transform:translateY(8%)}
-  #title .year{font-family:var(--comic);letter-spacing:.2em;color:#fff;text-shadow:2px 2px 0 #e8202a}
-  #title .sub{color:#6ae8ff}
+  html .burst span{display:inline-block;transform:translateY(8%)}
+  html #title .year{font-family:var(--comic);letter-spacing:.2em;color:#fff;text-shadow:2px 2px 0 #e8202a}
+  html #title .sub{color:#6ae8ff}
   /* 爆炸的狀聲詞:白色爆炸框 + 黃字粗黑邊(FEEL.boomWord) */
-  .pop.boom{font-family:var(--comic);font-size:calc(var(--fs)*1.7);color:#ffe020;-webkit-text-stroke:2px #101018;paint-order:stroke fill;
+  html .pop.boom{font-family:var(--comic);font-size:calc(var(--fs)*1.7);color:#ffe020;-webkit-text-stroke:2px #101018;paint-order:stroke fill;
     text-shadow:3px 3px 0 #e8202a;padding:.35em .6em .2em;z-index:6}
-  .pop.boom::before{content:"";position:absolute;inset:0;z-index:-1;background:#fff;border:0;
+  html .pop.boom::before{content:"";position:absolute;inset:0;z-index:-1;background:#fff;border:0;
     clip-path:polygon(50% 0,60% 24%,84% 6%,78% 34%,100% 38%,80% 56%,96% 82%,68% 74%,60% 100%,48% 78%,30% 98%,28% 72%,2% 84%,16% 56%,0 36%,24% 32%,14% 6%,40% 22%)}
-  .pop.boom.big{font-size:calc(var(--fs)*2.4)}
-  .pop.boom.big::before{background:#ffe020} .pop.boom.big{color:#e8202a;text-shadow:3px 3px 0 #101018}
-  #msg .big,#combo span{font-family:var(--comic),var(--cjk)}
+  html .pop.boom.big{font-size:calc(var(--fs)*2.4)}
+  html .pop.boom.big::before{background:#ffe020} html .pop.boom.big{color:#e8202a;text-shadow:3px 3px 0 #101018}
+  html #msg .big,html #combo span{font-family:var(--comic),var(--cjk)}
 </style>
 </head>
 <body class="title">

@@ -33,7 +33,9 @@
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/cartoon-1930/。
 - 同一個 repo 的 `comic-hero/` 是美式漫畫網點換皮(漫畫英雄 POW!,見 comic-hero/CLAUDE.md),陰影是網點、爆炸跳狀聲詞,
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/comic-hero/。
-- 同一個 repo 的 `arcade-core/` 是上面所有換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku / cartoon-1930 / comic-hero)的共用引擎
+- 同一個 repo 的 `ink-wuxia/` 是中國水墨武俠換皮(水墨江湖,見 ink-wuxia/CLAUDE.md),墨色 + 宣紙 + 朱紅,
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/ink-wuxia/。
+- 同一個 repo 的 `arcade-core/` 是上面所有換皮(sky-aces / monkey-king / three-kingdoms / temple-fair / yokai-night / night-market / animal-brawl / sengoku / cartoon-1930 / comic-hero / ink-wuxia)的共用引擎
   (不是獨立專案,各款 vite.config.js 用 `@arcade` alias 引入;見 arcade-core/CLAUDE.md)。star-bees 不用它。
   改 arcade-core = 全部一起變 → 每款都要 build + 實測。
 

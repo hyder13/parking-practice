@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f0ebe0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="水墨江湖">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23f0ebe0'/%3E%3Cpath d='M3 13 13 3' stroke='%23141414' stroke-width='2.2' stroke-linecap='round'/%3E%3Crect x='9.5' y='9.5' width='5' height='5' fill='%23c8281e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<title>水墨江湖 INK &amp; SWORD</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import,比這裡晚載入 → 這裡的選擇器都加 html 提高優先權);這裡只放這款的水墨樣式 */
+  /* 畫面是宣紙白 → HUD 改成墨色的字 + 紙色的光暈(共用 CSS 是白字黑影) */
+  html:root{--loop-label:"輕功";--loop-fs:.95;--loop-bg:rgba(240,235,224,.75);
+    --white:#1a1a1a;--red:#b8241a;--cyan:#2a3a44;--yellow:#7a4a10;--blue:#3a3a3a;--muted:#5a5a58;--line:#8a8680;--bg:#f0ebe0;--panel:rgba(240,235,224,.9);
+    --brush:"Ma Shan Zheng","Noto Serif TC",serif}
+  html #crt{display:none!important} /* 宣紙紋理在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  html #hud,html #hudB,html #msg,html #combo,html .pop,html #feed,html #bossBar,html #evoName,html #stageNo{text-shadow:0 0 3px #f4efe2,0 0 6px #f4efe2,0 0 10px #f4efe2!important}
+  html #combo b,html #score,html #stageNo{color:#1a1a1a} html #hi{color:#5a3a1a}
+  html .hbtn{background:rgba(240,235,224,.7);color:#1a1a1a;border-color:#8a8680}
+  html .feed{background:rgba(240,235,224,.85)}
+  html .pop.tag{background:rgba(240,235,224,.8)}
+  html #btnLoop{color:#1a1a1a;border-color:rgba(26,26,26,.7);box-shadow:0 0 10px rgba(240,235,224,.8);font-family:var(--brush)}
+  html #xp{background:rgba(26,26,26,.1);border-color:rgba(26,26,26,.4)} html #xpFill{background:linear-gradient(90deg,#3a3a3a,#141414)}
+  html #pwr i{background:rgba(26,26,26,.15)} html #pwr i.on{background:#b8241a;box-shadow:none}
+  html #loops i{border-color:#2a3a44} html #loops i.on{background:#2a3a44;box-shadow:none}
+  html #bossHp{background:rgba(26,26,26,.1);border-color:rgba(26,26,26,.5)} html #bossFill{background:linear-gradient(90deg,#141414,#5a5a5a)}
+  /* 標題:掛在宣紙上的一幅字 + 紅印章 */
+  html .overlay{background:radial-gradient(ellipse at 50% 45%,rgba(244,239,226,.55),rgba(244,239,226,.92))}
+  html .overlay,html .card,html .table,html .res{color:#1a1a1a}
+  html .sbtn{color:#1a1a1a!important;background:rgba(240,235,224,.8)!important;border-color:#8a8680!important}
+  html .sbtn.sel{border-color:#b8241a!important;color:#b8241a!important}
+  html .start{color:#1a1a1a}
+  html #title .logo.big{font-family:var(--brush),var(--cjk);font-weight:400;font-size:clamp(60px,21vw,110px);letter-spacing:.02em;line-height:1;background:none;color:#141414;filter:none;margin:.1em 0 0}
+  html #title .year{color:#3a3a3a;letter-spacing:.4em;text-shadow:none}
+  html #title .sub{color:#b8241a}
+  html .seal{display:inline-block;margin:.4em 0 .2em;padding:.12em .2em;background:#c8281e;color:#f4efe2;border-radius:3px;
+    font-family:var(--brush),var(--cjk);font-size:18px;line-height:1.05;transform:rotate(3deg);box-shadow:0 0 0 2px #c8281e inset,0 0 0 4px #f4efe2 inset}
+  html .hint,html .small,html .table .h{color:#3a3a3a}
+  html #msg .big,html #msg .cjk{font-family:var(--brush),var(--cjk);font-weight:400}
+  html #msg .big{font-size:1.5em}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 初出茅廬</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="輕功">輕功</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="logo big">水墨江湖</div>
+    <div class="year">INK &amp; SWORD</div>
+    <div class="sub">少年劍客 · 江湖三十回</div>
+    <div class="seal">仗劍<br>天涯</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="鐵頭陀"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="飛賊"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="山賊"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">劍氣</span><span class="cyan">R</span><span class="h">快劍</span><span>S</span><span class="h">金鐘罩</span>
+      <span>B</span><span class="h">霹靂彈</span><span>W</span><span class="h">仙鶴</span><span class="red">1UP</span><span class="h">包子</span>
+    </div>
+    <div class="small">江湖三十回 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">宣紙 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾回 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">功力 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

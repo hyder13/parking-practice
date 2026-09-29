@@ -4,7 +4,7 @@
 **不是獨立專案**(沒有 package.json),由各款遊戲的 Vite 用 alias 引進來一起打包。
 
 用的遊戲:`sky-aces/`、`monkey-king/`、`three-kingdoms/`、`temple-fair/`、`yokai-night/`(第一款直接用引擎做的換皮)、`night-market/`、`animal-brawl/`、`sengoku/`、
-`cartoon-1930/`(第一款「換畫法」的:黑白底片)、`comic-hero/`(美漫網點)。
+`cartoon-1930/`(第一款「換畫法」的:黑白底片)、`comic-hero/`(美漫網點)、`ink-wuxia/`(水墨)。
 `star-bees/` 是最早的原版,**不用** arcade-core(它另外有自己的 repo hyder13/star-bees)。
 
 【2026-09-29 使用者要求「先抽離完全共用」】四款裡一模一樣、或只差文字 / 少數手感參數的程式都搬到這裡;
@@ -54,6 +54,7 @@
 | palette.js `TOON = { key, patch(shader, mat), flatPatch }` | render/toon.js | `cel()` 材質編譯時改 shader(網點陰影、毛線紋路…);`key` 會進 program cache key |
 | `FEEL.boomWord(o)` | engine/main.js `explode` | 回傳 `[字, 'CSS class']` 就在爆炸位置跳字(美漫的 POW!) |
 - 注意:`pipeline.setSize` 會重設 `uThickness`(依解析度),`LOOK.ink.uThickness` 其實蓋不過去 → 要更粗在 `inkHooks.pre` 乘 `t`。
+- 各款 index.html 的 `<style>` 比 hud.css 早載入(hud.css 由 main.js import)→ 要蓋掉共用樣式,選擇器加 `html` 前綴(`html:root`、`html #hud`)。
 - `pipeline.time` 由 main.js `tick` 推進(`__game.step` 也會),畫風 shader 的 `uTime` 用它。
 
 ## 各款的 vite.config.js(必要設定)

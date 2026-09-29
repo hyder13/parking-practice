@@ -70,6 +70,10 @@ jobs:
         working-directory: comic-hero
       - run: cp -r comic-hero/dist dist/comic-hero
 
+      - run: npm ci && npm run build
+        working-directory: ink-wuxia
+      - run: cp -r ink-wuxia/dist dist/ink-wuxia
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

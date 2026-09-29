@@ -14,26 +14,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rye&display=swap" rel="stylesheet">
 <title>黑白卡通劇場 CARTOON REEL 1930</title>
 <style>
-  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import);這裡只放這款的黑白卡通樣式 */
-  :root{--loop-label:"蹦";--loop-fs:1.25;--loop-bg:rgba(20,18,16,.6);
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import,比這裡晚載入 → 這裡的選擇器都加 html 提高優先權);這裡只放這款的黑白卡通樣式 */
+  html:root{--loop-label:"蹦";--loop-fs:1.25;--loop-bg:rgba(20,18,16,.6);
     --bg:#141210;--red:#f8f4ea;--orange:#d8d0c0;--cyan:#e8e0d0;--blue:#c8c2b6;--white:#fffcf4;--yellow:#fff4d8;--muted:#b8b2a6;--line:#8a847a;
     --panel:rgba(20,18,16,.85)}
   /* HUD 跟畫面一樣是黑白的(共用 CSS 的彩色漸層 / 發光也一起去色) */
-  #hud,#hudB,#bossBar,#combo,#feed,#msg,.pop,#btnLoop,.overlay{filter:grayscale(1) sepia(.12)}
-  #btnLoop{border-color:rgba(248,244,234,.85);box-shadow:0 0 10px rgba(248,244,234,.3)}
-  .overlay{background:radial-gradient(ellipse at 50% 45%,rgba(20,18,16,.35),rgba(20,18,16,.9))}
+  html #hud,html #hudB,html #bossBar,html #combo,html #feed,html #msg,html .pop,html #btnLoop,html .overlay{filter:grayscale(1) sepia(.12)}
+  html #btnLoop{border-color:rgba(248,244,234,.85);box-shadow:0 0 10px rgba(248,244,234,.3)}
+  html .overlay{background:radial-gradient(ellipse at 50% 45%,rgba(20,18,16,.35),rgba(20,18,16,.9))}
   /* 標題:老卡通片頭的同心圓 + 手寫感的西部字體 */
-  #title .card{position:relative}
-  .rings{position:relative;width:min(330px,82vw,48vh);aspect-ratio:1;margin:6px auto 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  html #title .card{position:relative}
+  html .rings{position:relative;width:min(330px,82vw,48vh);aspect-ratio:1;margin:6px auto 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     border-radius:50%;background:repeating-radial-gradient(circle,#1a1816 0 14px,#f4efe4 14px 28px);box-shadow:0 0 0 6px #f4efe4,0 0 0 12px #1a1816}
-  .rings::before{content:"";position:absolute;inset:18%;border-radius:50%;background:#f4efe4;box-shadow:0 0 0 5px #1a1816}
-  .rings>*{position:relative}
-  #title .logo.big{font-size:clamp(18px,min(11vw,6.4vh),54px);letter-spacing:.02em;line-height:1.1;background:none;color:#1a1816;filter:none;margin:0}
-  .reel{font-family:Rye,Georgia,serif;font-size:clamp(9px,min(4.2vw,2.5vh),19px);letter-spacing:.12em;color:#1a1816;margin-top:.2em}
-  #title .year{font-family:Rye,Georgia,serif;color:#f4efe4;letter-spacing:.2em;margin-top:.7em}
-  #title .sub{color:#e8e0d0}
-  .pop{font-family:Rye,var(--cjk)}
-  #crt{display:none!important} /* 老膠卷的顆粒 / 刮痕在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  html .rings::before{content:"";position:absolute;inset:18%;border-radius:50%;background:#f4efe4;box-shadow:0 0 0 5px #1a1816}
+  html .rings>*{position:relative}
+  html #title .logo.big{font-size:clamp(18px,min(11vw,6.4vh),54px);letter-spacing:.02em;line-height:1.1;background:none;color:#1a1816;filter:none;margin:0}
+  html .reel{font-family:Rye,Georgia,serif;font-size:clamp(9px,min(4.2vw,2.5vh),19px);letter-spacing:.12em;color:#1a1816;margin-top:.2em}
+  html #title .year{font-family:Rye,Georgia,serif;color:#f4efe4;letter-spacing:.2em;margin-top:.7em}
+  html #title .sub{color:#e8e0d0}
+  html .pop{font-family:Rye,var(--cjk)}
+  html #crt{display:none!important} /* 老膠卷的顆粒 / 刮痕在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
 </style>
 </head>
 <body class="title">
