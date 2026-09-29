@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#5aa83a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="動物大亂鬥">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%236ab84a'/%3E%3Cpath d='M3 3l2 4h6l2-4v8a5 4 0 0 1-10 0z' fill='%23e89a48'/%3E%3Cellipse cx='8' cy='11' rx='3' ry='2.2' fill='%23fff4e4'/%3E%3Ccircle cx='8' cy='10' r='.9' fill='%232a2226'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<title>動物大亂鬥 ANIMAL BRAWL</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import);這裡只設這款的閃避鈕 */
+  :root{--loop-label:"翻滾";--loop-fs:1.0;--loop-bg:rgba(30,80,40,.45)}
+  #title .logo.big{font-size:clamp(40px,14vw,76px);letter-spacing:.04em} /* 五個字的標題縮小一點,不換行 */
+  /* 標題下的動物叫聲 */
+  .paw{display:inline-block;margin:.3em 0 .1em;font-family:var(--cjk);font-weight:900;font-size:20px;letter-spacing:.2em;color:#ffd0a0;text-shadow:0 2px 0 #6a3a1a}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 小柴</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="翻滾">翻滾</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="logo big">動物大亂鬥</div>
+    <div class="year">ANIMAL BRAWL</div>
+    <div class="sub">小柴犬 · 三十回合</div>
+    <div class="paw">汪!喵!吼!</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="野豬"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="鸚鵡"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="兔子"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">骨頭</span><span class="cyan">R</span><span class="h">快腿</span><span class="green">S</span><span class="h">泡泡</span>
+      <span style="color:#c77dff">B</span><span class="h">大聲吠</span><span style="color:#ff8a2a">W</span><span class="h">貓咪</span><span class="yellow">1UP</span><span class="h">大雞腿</span>
+    </div>
+    <div class="small">三十回合 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">紙紋 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾回合 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">等級 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

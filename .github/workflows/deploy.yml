@@ -53,6 +53,10 @@ jobs:
       - run: npm ci && npm run build
         working-directory: night-market
       - run: cp -r night-market/dist dist/night-market
+
+      - run: npm ci && npm run build
+        working-directory: animal-brawl
+      - run: cp -r animal-brawl/dist dist/animal-brawl
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
