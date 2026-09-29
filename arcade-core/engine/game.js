@@ -670,7 +670,11 @@ export class Game {
     if (e.mdl.shadow) e.mdl.shadow.position.z = -FEEL.groundZ + 0.04 - hop;
     if (FEEL.popup) squash(root, this.clock - (e.sq ?? -9));
     flicker(e.mdl.flames);
-    if (e.hazard) { rig.rotation.x += e.spin[0] * dt; rig.rotation.y += e.spin[1] * dt; return; }
+    if (e.hazard) {
+      rig.rotation.x += e.spin[0] * dt; rig.rotation.y += e.spin[1] * dt;
+      if (e.mdl.spin) e.mdl.spin.rotation.z += dt * 7; // 模型裡有 'spin' 群組(例如輪入道的車輪)就讓它自己轉
+      return;
+    }
     rig.rotation.y = e.mdl.upright ? e.roll * 0.3 : e.roll;
     spinProps(e.mdl, dt);
     flapWings(e.mdl, e.flap);

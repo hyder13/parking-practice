@@ -1,0 +1,16 @@
+{
+  "name": "yokai-night",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ukiyo-e Hyakki Yagyo (night parade of yokai) vertical shooter in cel-shaded 3D for mobile. Three.js, no image / audio assets.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": { "three": "^0.180.0" },
+  "devDependencies": { "vite": "^6.0.0" },
+  "overrides": { "rollup": "npm:@rollup/wasm-node@^4" }
+}
