@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { PAL } from '../core/palette.js';
 import { FW, ROW0, TOP_SPAWN } from './config.js';
 import { spawnModel, FLASH_MAT } from './models.js';
@@ -29,6 +30,12 @@ export class BigBoss {
     this.mdl = spawnModel('big_' + this.kind);
     game.scene.add(this.mdl.root);
     this.orig = this.mdl.meshes.map((m) => m.material);
+    // 進場護盾(半透明泡泡),降到定位就消失
+    this.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshBasicMaterial({
+      color: 0x9fe8ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    this.bubble.scale.set(this.info.rx * 1.15, this.info.ry * 1.15, 1);
+    game.scene.add(this.bubble);
     this.hp = this.hpMax = cfg.boss.hp;
     this.state = 'enter';
     this.x = 0; this.y = TOP_SPAWN + 4; this.vx = 0;
@@ -42,7 +49,9 @@ export class BigBoss {
 
   get hoverY() { return ROW0 - (this.kind === 'gold' ? 4 : 3.2); }
   get enraged() { return this.hp < this.hpMax * 0.5; }
-  get hittable() { return this.state === 'enter' || this.state === 'fight'; }
+  get hittable() { return this.state === 'fight'; }
+  /** 進場中有護盾:子彈打不進去(BOSS 一定會先降下來開打) */
+  get shielded() { return this.state === 'enter'; }
 
   /** 橢圓碰撞 */
   contains(x, y, pad = 0) {
@@ -55,8 +64,8 @@ export class BigBoss {
     this.life += dt; this.flap += dt * 7;
     const px = this.x;
     if (this.state === 'enter') {
-      this.y = lerp(this.y, this.hoverY, Math.min(1, dt * 1.4));
-      if (Math.abs(this.y - this.hoverY) < 0.15) this.state = 'fight';
+      this.y = lerp(this.y, this.hoverY, Math.min(1, dt * 2.2));
+      if (Math.abs(this.y - this.hoverY) < 0.15) { this.state = 'fight'; this.atkT = 0.4; this.pT = 1.2; }
     } else if (this.state === 'fight') {
       this.ft += dt;
       if (this.kind === 'gold') {
@@ -71,7 +80,14 @@ export class BigBoss {
         this.y = lerp(this.y, this.hoverY + Math.sin(this.ft * w * 2) * 1.1, Math.min(1, dt * 3));
         if (G.player.state === 'play') {
           this.atkT -= dt;
-          if (this.atkT <= 0) { this.attack(); this.atkT = lerp(2.3, 1.0, this.t) * (this.enraged ? 0.7 : 1); }
+          if (this.atkT <= 0) { this.attack(); this.atkT = lerp(3.0, 0.8, this.t) * (this.enraged ? 0.7 : 1); }
+          // 主要招式之外,持續補瞄準彈(不讓玩家有空檔站著不動)
+          // 第 4 關以後才有(前幾關的 BOSS 讓新手先學會看招)
+          if (this.n >= 4) this.pT -= dt;
+          if (this.pT <= 0) {
+            this.pT = lerp(3.2, 0.8, this.t) * (this.enraged ? 0.7 : 1);
+            this.shoot(this.aimAngle(), lerp(9.5, 16.5, this.t));
+          }
         }
       }
     } else if (this.state === 'escape') {
@@ -109,6 +125,8 @@ export class BigBoss {
     }
     const { root, rig, wings, spin } = this.mdl;
     root.position.set(this.x, this.y, 0.2);
+    this.bubble.visible = this.state === 'enter';
+    if (this.bubble.visible) { this.bubble.position.set(this.x, this.y, 0.4); this.bubble.material.opacity = 0.14 + Math.sin(this.life * 12) * 0.05; }
     root.rotation.z = Math.PI;
     rig.rotation.y = Math.max(-0.4, Math.min(0.4, -this.vx * 0.05));
     const sq = Math.tanh(Math.sin(this.flap) * 2);
@@ -127,7 +145,7 @@ export class BigBoss {
 
   attack() {
     const t = this.t, rage = this.enraged ? 2 : 0;
-    const v = lerp(8, 14, t) * (this.enraged ? 1.1 : 1);
+    const v = lerp(8, 15.5, t) * (this.enraged ? 1.12 : 1);
     const moves = {
       queen: ['fan', 'aim', 'fan', 'summon'],
       moth: ['spiral', 'fan', 'rain', 'aim'],
@@ -135,20 +153,20 @@ export class BigBoss {
     }[this.kind];
     const m = moves[this.atkI++ % moves.length];
     if (m === 'fan') {
-      const n = 5 + Math.floor(t * 6) + rage, spread = 0.16, a0 = this.aimAngle() * 0.5;
+      const n = 4 + Math.floor(t * 9) + rage, spread = 0.16, a0 = this.aimAngle() * 0.6;
       for (let i = 0; i < n; i++) this.shoot(a0 + (i - (n - 1) / 2) * spread, v);
       this.g.h.sfx('bossShot');
     } else if (m === 'aim') {
-      const k = 3 + Math.floor(t * 3) + (rage ? 1 : 0);
+      const k = 3 + Math.floor(t * 4) + (rage ? 1 : 0);
       for (let i = 0; i < k; i++) this.queue.push({ t: i * 0.13, fn: () => { this.shoot(this.aimAngle(), v * 1.15); this.g.h.sfx('bossShot'); } });
     } else if (m === 'ring') {
-      const n = 10 + Math.floor(t * 14) + rage * 2, off = Math.random();
+      const n = 12 + Math.floor(t * 14) + rage * 2, off = Math.random();
       for (let i = 0; i < n; i++) this.shoot(off + i * Math.PI * 2 / n, v * 0.8);
       this.g.h.sfx('bossShot');
     } else if (m === 'spiral') {
-      this.stream = { t: 1.4 + t, k: 0, every: lerp(0.12, 0.06, t), a: Math.random() * 6, step: 0.42, arms: 2 + (rage ? 1 : 0), v: v * 0.8 };
+      this.stream = { t: 1.4 + t, k: 0, every: lerp(0.1, 0.05, t), a: Math.random() * 6, step: 0.42, arms: 2 + (rage ? 1 : 0), v: v * 0.8 };
     } else if (m === 'rain') {
-      const n = 6 + Math.floor(t * 8) + rage;
+      const n = 8 + Math.floor(t * 8) + rage;
       for (let i = 0; i < n; i++) this.queue.push({ t: i * 0.07, fn: () => {
         const x = (Math.random() - 0.5) * (FW - 2);
         this.g.fireBullet(x, this.y, 0, -v * 0.75, true);
@@ -185,5 +203,5 @@ export class BigBoss {
     this.done = true;
   }
 
-  remove() { this.g.scene.remove(this.mdl.root); }
+  remove() { this.g.scene.remove(this.mdl.root, this.bubble); }
 }

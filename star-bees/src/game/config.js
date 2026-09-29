@@ -49,7 +49,7 @@ export const SCORE = {
   boss: [150, 400], // 俯衝中帶護衛:先打掉 1 隻護衛 800、2 隻 1600
   rock: [30, 30],   // 隕石(打 3 下)
 };
-export const EXTRA_LIFE = [20000, 70000]; // 之後每 70000 加一台
+export const EXTRA_LIFE = [30000, 100000]; // 之後每 100000 加一台
 
 /* ---------------- 進場波次 ----------------
  * 每關 5 波、每波 8 隻。pair = 左右兩條隊伍同時進場(前 4 隻走 s=-1、後 4 隻 s=+1),
@@ -147,7 +147,8 @@ function challengeWaves(level) {
   });
 }
 
-const bossHp = (n) => Math.round(14 + 20 * (n - 1) + 1.5 * (n - 1) ** 2);
+// 【使用者回饋 2026-09-29】BOSS 太弱、還沒攻擊就死 → 血量約 3 倍(第 1 關 45、第 10 關 ~650、第 30 關 ~3400)
+const bossHp = (n) => Math.round(45 + 45 * (n - 1) + 2.5 * (n - 1) ** 2);
 
 export function stageCfg(n) {
   if (n > MAX_STAGE) {
@@ -164,8 +165,8 @@ export function stageCfg(n) {
   if (def.challenge !== undefined) {
     return {
       n, t, kind: 'challenge', name: def.name, twists: [], shape: 'grid', waves: challengeWaves(def.challenge),
-      enterSpeed: lerpT(14, 19.5, t), reinforce: 0,
-      boss: { kind: 'gold', hp: 18 + 3 * n }, bosses: ['gold'],
+      enterSpeed: lerpT(16, 21, t), reinforce: 0,
+      boss: { kind: 'gold', hp: 30 + 5 * n }, bosses: ['gold'],
     };
   }
   const waves = def.paths.map((p, i) => {
@@ -178,12 +179,14 @@ export function stageCfg(n) {
   const bosses = def.bosses || [BOSS_KINDS[normalIdx % BOSS_KINDS.length]];
   const c = {
     n, t, kind: 'normal', name: def.name, shape: def.shape, twists: def.twists, waves,
-    enterSpeed: lerpT(12.5, 19, t), enterFire: n < 3 ? 0 : lerpT(0.05, 0.45, t),
-    diveEvery: lerpT(3.0, 0.9, Math.sqrt(t)), maxDivers: Math.round(lerpT(1.5, 6, t)),
-    diveSpeed: lerpT(9.5, 16.5, t), shots: Math.round(lerpT(1, 3.4, t)), bulletSpeed: lerpT(10, 17, t),
-    beamChance: n < 3 ? 0.15 : lerpT(0.3, 0.5, t), escort: lerpT(0.2, 0.7, t), beeLoop: lerpT(0.15, 0.6, t),
-    diveFrom: n < 6 ? 5 : n < 15 ? 4 : n < 24 ? 3 : 2,
-    reinforce: n < 12 ? 0 : n < 20 ? 1 : 2,
+    // 【使用者回饋 2026-09-29】整體太簡單 → 全面提升一級(更快、更多、更準)
+    enterSpeed: lerpT(14, 21, t), enterFire: n < 3 ? 0.03 : lerpT(0.1, 0.55, t),
+    diveEvery: lerpT(2.6, 0.7, Math.sqrt(t)), maxDivers: Math.round(lerpT(2, 7, t)),
+    diveSpeed: lerpT(10.5, 18, t), shots: Math.round(lerpT(1, 4, t)), bulletSpeed: lerpT(11, 19, t),
+    beamChance: n < 3 ? 0.25 : lerpT(0.35, 0.55, t), escort: lerpT(0.35, 0.8, t), beeLoop: lerpT(0.25, 0.7, t),
+    diveFrom: n < 3 ? 5 : n < 8 ? 4 : n < 15 ? 3 : 2,
+    reinforce: n < 8 ? 0 : n < 16 ? 1 : n < 26 ? 2 : 3,
+    formFire: n >= 5 ? lerpT(6, 2.5, t) : 0, // 基本的陣型冷槍(SNIPERS 關會更密)
     bosses,
   };
   // 連戰時每隻血量打七五折

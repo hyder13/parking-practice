@@ -703,7 +703,7 @@ export class Game {
 
   fireAt(e) {
     const P = this.player;
-    let dx = P.x - e.x + rand(-1.2, 1.2), dy = P.y - e.y;
+    let dx = P.x - e.x + rand(-0.9, 0.9), dy = P.y - e.y; // 比舊版瞄得準一點
     if (dy > -2) return;
     const L = Math.hypot(dx, dy); dx /= L; dy /= L;
     if (dy > -0.62) { dy = -0.62; dx = Math.sign(dx) * Math.sqrt(1 - dy * dy); }
@@ -813,11 +813,11 @@ export class Game {
   maybeDrop(e) {
     const early = this.stageN <= 3;
     this.dropPity = (this.dropPity || 0) + 1;
-    const chance = e.minion ? 0.02 : e.type === 'boss' ? 0.2 : early ? 0.06 : 0.035;
+    const chance = e.minion ? 0.015 : e.type === 'boss' ? 0.15 : early ? 0.045 : 0.025;
     // 新手引導:第一次玩第 6 隻一定掉 P;太久沒掉也保底
     let kind = null;
     if (!this.gotFirstP && this.stats.kills === 6) kind = 'P';
-    else if (this.dropPity >= 40 || Math.random() < chance) kind = this.randomItem();
+    else if (this.dropPity >= 55 || Math.random() < chance) kind = this.randomItem();
     if (!kind) return;
     this.dropPity = 0;
     this.dropItem(e.x, e.y, kind);
@@ -867,8 +867,8 @@ export class Game {
         this.h.sfx('powerUp');
         if (P.w === MAX_POWER) this.achieve('power');
       } else { this.addScore(1000); this.h.popup(x, y, 1000, 'yellow'); }
-    } else if (kind === 'R') { P.rapidT = 10; this.tag('RAPID', 'cyan'); }
-    else if (kind === 'S') { P.shieldT = 15; this.tag('SHIELD', 'green'); this.h.sfx('shield'); }
+    } else if (kind === 'R') { P.rapidT = 8; this.tag('RAPID', 'cyan'); }
+    else if (kind === 'S') { P.shieldT = 10; this.tag('SHIELD', 'green'); this.h.sfx('shield'); }
     else if (kind === 'B') this.bomb();
     else if (kind === 'L') { P.lives++; this.tag('1UP', 'yellow'); this.h.sfx('extra'); this.pushHUD(); }
     this.pushStatus();
@@ -1051,7 +1051,7 @@ export class Game {
 
   get fireRate() {
     const P = this.player;
-    return (1 + 0.07 * (P.evo - 1)) * (P.rapidT > 0 ? 1.7 : 1);
+    return (1 + 0.05 * (P.evo - 1)) * (P.rapidT > 0 ? 1.7 : 1);
   }
   get damage() { return 1 + Math.floor((this.player.evo - 1) / 3); }
 
@@ -1123,6 +1123,12 @@ export class Game {
     const B = this.big;
     for (const s of this.shots) {
       if (!s.on) continue;
+      if (B && B.shielded && B.contains(s.x, s.y)) {
+        // 進場護盾:子彈被擋掉
+        s.on = false;
+        if (Math.random() < 0.25) this.h.explode(s.x, s.y, [0x9fe8ff, 0xffffff], { n: 3, life: 0.2 });
+        continue;
+      }
       if (B && B.hittable && B.contains(s.x, s.y)) {
         s.on = false; this.stats.hits++;
         const dead = B.hit(s.dmg);
@@ -1182,7 +1188,7 @@ export class Game {
     this.score += p;
     if (this.score >= this.nextExtra) {
       this.player.lives++;
-      this.nextExtra = this.nextExtra < EXTRA_LIFE[1] ? EXTRA_LIFE[1] : this.nextExtra + 70000;
+      this.nextExtra = this.nextExtra < EXTRA_LIFE[1] ? EXTRA_LIFE[1] : this.nextExtra + 100000;
       this.h.sfx('extra');
       this.tag('1UP', 'yellow');
     }
