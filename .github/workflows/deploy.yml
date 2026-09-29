@@ -66,6 +66,10 @@ jobs:
         working-directory: cartoon-1930
       - run: cp -r cartoon-1930/dist dist/cartoon-1930
 
+      - run: npm ci && npm run build
+        working-directory: comic-hero
+      - run: cp -r comic-hero/dist dist/comic-hero
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

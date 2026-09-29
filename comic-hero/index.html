@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101018">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="漫畫英雄 POW!">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23ffd020'/%3E%3Cpath d='M9.5 1 3.5 9h4l-1.5 6 6-8.5h-4z' fill='%23e8202a' stroke='%23101018' stroke-width='.8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bangers&display=swap" rel="stylesheet">
+<title>漫畫英雄 POW! COMIC HERO</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import);這裡只放這款的美漫樣式 */
+  :root{--loop-label:"飛";--loop-fs:1.25;--loop-bg:rgba(32,80,216,.6);
+    --red:#ff3a3a;--cyan:#6ae8ff;--yellow:#ffe020;--white:#fffdf4;--bg:#101018;--line:#101018;--comic:Bangers,"Arial Black",Impact,sans-serif}
+  #crt{display:none!important} /* 新聞紙 / 套色偏移在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  /* 標題:漫畫封面(黃色爆炸框 + 粗黑邊的字) */
+  #title .logo.big{font-family:var(--comic),var(--cjk);font-size:clamp(40px,14vw,76px);letter-spacing:.04em;background:none;color:#ffe020;
+    -webkit-text-stroke:3px #101018;paint-order:stroke fill;filter:drop-shadow(5px 5px 0 #e8202a) drop-shadow(0 0 0 #101018);margin:.1em 0 0;transform:rotate(-4deg)}
+  .burst{display:inline-block;margin:.2em auto .1em;padding:.35em 1.1em .25em;font-family:var(--comic);font-size:clamp(22px,7vw,36px);letter-spacing:.06em;color:#101018;
+    background:#fff;clip-path:polygon(50% 0,61% 22%,85% 8%,78% 34%,100% 40%,80% 56%,96% 80%,70% 74%,62% 100%,48% 78%,30% 98%,28% 72%,2% 82%,16% 56%,0 36%,24% 32%,16% 6%,40% 20%);
+    transform:rotate(6deg)}
+  .burst span{display:inline-block;transform:translateY(8%)}
+  #title .year{font-family:var(--comic);letter-spacing:.2em;color:#fff;text-shadow:2px 2px 0 #e8202a}
+  #title .sub{color:#6ae8ff}
+  /* 爆炸的狀聲詞:白色爆炸框 + 黃字粗黑邊(FEEL.boomWord) */
+  .pop.boom{font-family:var(--comic);font-size:calc(var(--fs)*1.7);color:#ffe020;-webkit-text-stroke:2px #101018;paint-order:stroke fill;
+    text-shadow:3px 3px 0 #e8202a;padding:.35em .6em .2em;z-index:6}
+  .pop.boom::before{content:"";position:absolute;inset:0;z-index:-1;background:#fff;border:0;
+    clip-path:polygon(50% 0,60% 24%,84% 6%,78% 34%,100% 38%,80% 56%,96% 82%,68% 74%,60% 100%,48% 78%,30% 98%,28% 72%,2% 84%,16% 56%,0 36%,24% 32%,14% 6%,40% 22%)}
+  .pop.boom.big{font-size:calc(var(--fs)*2.4)}
+  .pop.boom.big::before{background:#ffe020} .pop.boom.big{color:#e8202a;text-shadow:3px 3px 0 #101018}
+  #msg .big,#combo span{font-family:var(--comic),var(--cjk)}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 新手英雄</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="飛">飛</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="logo big">漫畫英雄</div>
+    <div class="burst"><span>POW!</span></div>
+    <div class="year">COMIC HERO</div>
+    <div class="sub">驚奇小子 · 城市三十話</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="大塊頭"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="噴射打手"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="機器人"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">能量</span><span class="cyan">R</span><span class="h">超音速</span><span class="green">S</span><span class="h">力場</span>
+      <span style="color:#c77dff">B</span><span class="h">大爆炸</span><span style="color:#ff8a20">W</span><span class="h">狗狗</span><span class="yellow">1UP</span><span class="h">漢堡</span>
+    </div>
+    <div class="small">三十話 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">印刷感 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾話 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">英雄等級 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
