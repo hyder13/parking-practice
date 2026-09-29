@@ -49,6 +49,10 @@ jobs:
       - run: npm ci && npm run build
         working-directory: yokai-night
       - run: cp -r yokai-night/dist dist/yokai-night
+
+      - run: npm ci && npm run build
+        working-directory: night-market
+      - run: cp -r night-market/dist dist/night-market
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
