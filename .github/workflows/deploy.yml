@@ -41,6 +41,10 @@ jobs:
       - run: npm ci && npm run build
         working-directory: three-kingdoms
       - run: cp -r three-kingdoms/dist dist/three-kingdoms
+      # 鬧熱廟會(temple-fair/,台灣廟會主題換皮)→ /temple-fair/
+      - run: npm ci && npm run build
+        working-directory: temple-fair
+      - run: cp -r temple-fair/dist dist/temple-fair
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
