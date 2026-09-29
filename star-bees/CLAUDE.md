@@ -14,7 +14,8 @@
 ## 路由
 | 要改 | 位置 |
 |---|---|
-| 100 關生成(波數、增援、難度曲線、BOSS 血量) | src/game/config.js `stageCfg` |
+| 30 關關卡表(名稱、陣型、機制、軌跡、BOSS) | src/game/config.js `STAGE_TABLE` / `TWISTS` / `stageCfg` |
+| 關卡機制實作(狙擊、齊射、隕石、裝甲、蛇行…) | src/game/game.js `updateTwists`、`spawnRock`、`slotPos`(陣型形狀)、`snake` |
 | 關底 BOSS(模型在 models.js `bigTemplate`) | src/game/boss.js |
 | 火力 / 道具 / 進化 / 連擊 / 成就 / 評星 | src/game/game.js `PATTERNS`、`EVO_XP`、`maybeDrop`、`onKill`、`startClear`、`ACH` |
 | 10 段戰機外型 | src/game/models.js `SHIP_LV` / `shipBody` |
@@ -36,10 +37,14 @@
   `__game.game` 可直接呼叫 `launch(e)`、`hitEnemy(e)`。
 - 2026-09-28 驗證:Playwright + Chromium(390x844 / 360x640 / 844x390 / 1280x720)五關全部跑完無 console error;
   光束捕獲 → 救回 → 雙機流程正常;獎勵關結算、第 5 關後循環正常。
-- 2026-09-28 升級版驗證:bot 從第 1 / 21 / 51 / 91 / 99 關開始連打無 error;流程 play → warn → boss → clear 正常,
+- 2026-09-28 升級版驗證(當時還是 100 關版本):bot 從第 1 / 21 / 51 / 91 / 99 關開始連打無 error;流程 play → warn → boss → clear 正常,
   第 100 → 101 關正常。BOSS 戰(無敵 bot 全火力)約:第 1 關 5 秒、21 關 10~20 秒、51 關 13~21 秒、100 關 ~50 秒。
   不會閃躲的 bot 不開無敵也能打到第 15 關 → 前期很寬鬆是刻意的(小勝利),要調難度看 `stageCfg` 的 lerpT 參數。
 - 子彈用 InstancedMesh(models.js `Batch`),整批 2 個 draw call;不要改回一顆一個 mesh。
 - BOSS 受擊閃白有節流(boss.js `hit`,每 0.2 秒最多一次),不然連射時整隻都是白的。
+- 【使用者回饋 2026-09-29】100 關每關差不多 → 改成 30 關手工關卡表,每關要有自己的機制 / 陣型 / 軌跡,難度逐關明顯上升。
+  新增關卡機制:在 config.js `TWISTS` 加一條(hint + apply),需要新行為再到 game.js `updateTwists` 實作。
+- 2026-09-29 30 關驗證:無敵 bot 從第 1 關連打到第 57 關(EXTRA)無 error;每關耗時 1~9 關 16~27 秒、
+  10~19 關 27~36 秒、20~29 關 36~53 秒、第 30 關(三 BOSS 連戰)84 秒。
 - 【使用者回饋 2026-09-28】畫面中央不要堆提示:中央只放流程訊息(`h.msg`)。回饋改用右側連擊(`h.combo`)、
   戰機頭上小標籤(`game.tag`)、左上側欄(`h.feed`)、底部狀態列動畫(`h.evolved`)。新增提示請沿用這些位置。

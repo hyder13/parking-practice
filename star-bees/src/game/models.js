@@ -316,12 +316,47 @@ function bigTemplate(kind) {
   return root;
 }
 
+/* ---------------- 隕石(METEOR 關卡) ---------------- */
+const ROCK = { a: cel({ color: 0x8a6a55 }), b: cel({ color: 0x5e4a40, bands: 2 }), c: cel({ color: 0xa58a70 }) };
+function rockBody(b) {
+  part(b, GEO.ico, ROCK.a, [0, 0, 0], [0.85, 0.75, 0.7], [0.3, 0.5, 0.2]);
+  part(b, GEO.ico0, ROCK.b, [0.45, 0.3, 0.2], 0.42, [0.8, 0.1, 0.4]);
+  part(b, GEO.ico0, ROCK.c, [-0.4, -0.35, 0.15], 0.38, [0.2, 0.9, 0.1]);
+  part(b, GEO.ico0, ROCK.b, [-0.2, 0.45, -0.1], 0.3);
+}
+function rockTemplate() {
+  const root = template(rockBody, [], 1);
+  // 拖在後面的火焰尾巴(機頭 = 前進方向,尾巴在 -y)
+  const tail = part(root, GEO.cone, new THREE.MeshBasicMaterial({ color: 0xff8a3a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
+    [0, -1.3, -0.1], [0.55, 1.6, 0.3]);
+  tail.name = 'tail';
+  return root;
+}
+
+/** 裝甲關:敵人換成偏鋼灰的材質,裝甲打掉後換回原色 */
+const armorCache = new Map();
+const STEEL = new THREE.Color(0x9aa4c0);
+export function armorize(mdl) {
+  mdl.orig = mdl.meshes.map((m) => m.material);
+  mdl.meshes.forEach((m) => {
+    const src = m.material;
+    if (!src.isMeshToonMaterial) return;
+    if (!armorCache.has(src)) armorCache.set(src, cel({ color: src.color.clone().lerp(STEEL, 0.6).getHex(), bands: 2 }));
+    m.material = armorCache.get(src);
+  });
+}
+export function unarmor(mdl) {
+  if (mdl.orig) mdl.meshes.forEach((m, i) => { m.material = mdl.orig[i]; });
+  mdl.orig = null;
+}
+
 const TEMPLATES = {
   bee: template(beeBody, beeWings, 1.0),
   bfly: template(bflyBody, bflyWings, 1.0),
   boss: template(bossBody, bossWings, 1.1),
   ship: shipTemplate({ white: M.shipWhite, red: M.shipRed, blue: M.shipBlue }),
   captive: shipTemplate({ white: M.capWhite, red: M.capRed, blue: M.capBlue }),
+  rock: rockTemplate(),
 };
 function lazyTemplate(type) {
   if (TEMPLATES[type]) return TEMPLATES[type];

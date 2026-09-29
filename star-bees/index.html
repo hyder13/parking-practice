@@ -109,6 +109,8 @@
   /* ---------- 中央訊息 / 得分跳字 ---------- */
   #msg{position:fixed;left:var(--fl);width:var(--fw);top:0;transform:translateY(-50%);text-align:center;
     font-size:calc(var(--fs)*1.05);line-height:2.1;pointer-events:none;z-index:6;text-shadow:0 0 10px rgba(0,0,0,.95)}
+  #msg .hint{font-family:var(--cjk);font-weight:700;font-size:.78em;line-height:1.6;margin:.3em 0 .5em}
+  #msg .small{font-size:.6em;margin:0;color:var(--muted)}
   .red{color:var(--red)} .cyan{color:var(--cyan)} .white{color:var(--white)} .yellow{color:var(--yellow)} .blue{color:var(--blue)}
   .pop{position:fixed;left:0;top:0;font-size:calc(var(--fs)*.85);pointer-events:none;z-index:6;white-space:nowrap;
     text-shadow:0 0 6px #000;will-change:transform}
@@ -179,7 +181,7 @@
       <span class="red">P</span><span class="h">火力升級</span><span class="cyan">R</span><span class="h">連射</span>
       <span class="green">S</span><span class="h">護盾</span><span style="color:#c77dff">B</span><span class="h">炸彈</span>
     </div>
-    <div class="small">100 STAGES · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="small">30 STAGES · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
     <div class="row" id="stageSel"></div>
     <div class="hint" id="hint"></div>
     <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">CRT ON</button></div>

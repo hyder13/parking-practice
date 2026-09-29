@@ -3,7 +3,7 @@ import { PAL } from './core/palette.js';
 import { Pipeline } from './core/post.js';
 import { initAudio, setMuted, isMuted, sfx } from './core/audio.js';
 import { spriteURL } from './core/pixel.js';
-import { FW, FH, PLAYER_Y, ROW0, setFieldHeight } from './game/config.js';
+import { FW, FH, PLAYER_Y, ROW0, MAX_STAGE, setFieldHeight } from './game/config.js';
 import { Space } from './game/space.js';
 import { FX } from './game/fx.js';
 import { Game } from './game/game.js';
@@ -194,8 +194,8 @@ function achieve(id, label) {
   feed(`★ ${label}`, 'yellow');
   sfx.achieve();
 }
-let best = +store.get('best', 1) || 1;
-function progress(n) { if (n > best) { best = Math.min(n, 100); store.set('best', best); renderCheckpoints(); } }
+let best = Math.min(MAX_STAGE, +store.get('best', 1) || 1); // 舊版 100 關存的進度要夾回 30
+function progress(n) { if (n > best) { best = Math.min(n, MAX_STAGE); store.set('best', best); renderCheckpoints(); } }
 
 /* ================= 換關的「曲速」 ================= */
 let warpT = 0, warpDur = 1;
@@ -234,8 +234,8 @@ game.pushHUD();
 document.body.classList.add('title'); // 標題畫面時隱藏 HUD(artifact 版沒有自己的 <body> 標籤)
 let selStage = 1, paused = false;
 function renderCheckpoints() {
-  // 檢查點:每 10 關一個,打到過的才解鎖(測試版全部開放,鎖住的顯示暗色)
-  const cps = Array.from({ length: 10 }, (_, i) => i * 10 + 1);
+  // 檢查點:每 5 關一個,打到過的才解鎖(測試版全部開放,鎖住的顯示暗色)
+  const cps = Array.from({ length: MAX_STAGE / 5 }, (_, i) => i * 5 + 1);
   $('stageSel').innerHTML = cps.map((n) => `<button class="sbtn${n === selStage ? ' sel' : ''}${n > best ? ' locked' : ''}" data-s="${n}">${n}</button>`).join('');
   $('bestStage').textContent = best;
 }

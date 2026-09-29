@@ -70,6 +70,10 @@ export const ENTRY = {
   sideHigh: (s) => mirror(s, [[-14, 3], [-7, 1.5], [-1, -2], [4, -6.5], [7.5, -4], [6.5, 0.5], [2.5, 1.5], [-1, 3]]),
   // 螺旋:從上角進來、在側邊轉一圈
   spiral: (s) => mirror(s, [[10, 19], [9, 9], [5, 4], [1.5, 0], [2.5, -4.5], [6.5, -5], [8, -1], [6, 2.5], [2.5, 2.5]]),
+  // 從正上方直直掉下來,在陣型下方勾一下
+  dropIn: (s) => mirror(s, [[4, 19], [4, 7], [2.5, 1.5], [5, -1.5], [7.5, 1.5], [5.5, 5]]),
+  // 從側邊低處進來,在場地中間繞一個大圈
+  loopBig: (s) => mirror(s, [[-14, -2], [-6, -3], [0, -4.5], [5, -2], [6, 3], [2, 6.5], [-3, 5], [-4, 1], [-1, -1], [2, 2]]),
   // 之字形:左右大幅擺盪一路壓到底
   zig: (s) => mirror(s, [[-9, 19], [-8, 12], [4, 7], [-4, 2], [5, -3], [1, -7], [-3, -5], [-2, -1], [1, 2]]),
 
@@ -133,6 +137,24 @@ export function diveBeam(x, y, px) {
 }
 
 /** 從目前位置往下飛出畫面 */
+/** 蛇行:俯衝段(起手式之後)每兩個控制點中間插一個左右交錯的點 */
+export function weave(pts, amp) {
+  const o = pts.slice(0, 4);
+  for (let i = 4; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    if (i < pts.length - 1) o.push([cx((ax + bx) / 2 + (o.length % 2 ? amp : -amp)), (ay + by) / 2]);
+    o.push(pts[i]);
+  }
+  o.loop = pts.loop;
+  return o;
+}
+
+/** 隕石:從上方斜斜穿過整個場地 */
+export function meteorPath() {
+  const x0 = rand(-10, 10), x1 = clamp(x0 + rand(-7, 7), -11, 11);
+  return [[x0, TOP_SPAWN + 1], [(x0 + x1) / 2, 0], [x1, out() - 1]];
+}
+
 export function exitDown(x, y) {
   return [[x, y], [x, y - 3], [cx(x + rand(-3, 3)), out()]];
 }

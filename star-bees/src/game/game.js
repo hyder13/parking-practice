@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { PAL } from '../core/palette.js';
-import { FW, FH, PLAYER_Y, TOP_SPAWN, BOTTOM_OUT, ROWS, ROW0, DY_TOP, slotOf, SCORE, EXTRA_LIFE, MAX_STAGE, stageCfg } from './config.js';
-import { Path, ENTRY, diveBee, diveBfly, diveBoss, diveBeam, exitDown } from './paths.js';
-import { spawnModel, shotBatch, enemyShotBatch, BOSS_HIT_SWAP, SHIP_LV, ITEMS } from './models.js';
+import { FW, FH, PLAYER_Y, TOP_SPAWN, BOTTOM_OUT, ROWS, ROW0, DY_TOP, slotOf, SCORE, EXTRA_LIFE, MAX_STAGE, TWISTS, stageCfg } from './config.js';
+import { Path, ENTRY, diveBee, diveBfly, diveBoss, diveBeam, exitDown, weave, meteorPath } from './paths.js';
+import { spawnModel, shotBatch, enemyShotBatch, armorize, unarmor, BOSS_HIT_SWAP, SHIP_LV, ITEMS } from './models.js';
 import { BigBoss, BOSS_INFO } from './boss.js';
 
 /* ------------------------------------------------------------------ *
@@ -36,11 +36,13 @@ export const COLORS = {
   bossHit: [PAL.bossHit, PAL.bossWing, PAL.bossHitHead, PAL.white],
   ship: [PAL.shipWhite, PAL.shipRed, PAL.shipBlue, PAL.engine, PAL.shipCyan],
   captive: [PAL.captive, PAL.white, PAL.captiveDark],
+  rock: [0x8a6a55, 0xa58a70, 0xff8a3a, 0x5e4a40],
+  steel: [0x9aa4c0, 0xffffff, 0xcfd6ea],
 };
 
 const DUAL_DX = 1.15;          // 雙機:第二台在右邊多遠
 const SHOT_SPEED = 34;
-const HIT_R = { bee: 0.78, bfly: 0.82, boss: 0.95 };
+const HIT_R = { bee: 0.78, bfly: 0.82, boss: 0.95, rock: 0.95 };
 const CAPTIVE_OFF = 1.25;      // 被抓的戰機掛在王身後多遠
 const BEAM_LEN = 8.2;
 const ATTACKING = new Set(['dive', 'escort', 'beamdive', 'beam', 'exit']);
@@ -58,16 +60,16 @@ const PATTERNS = [
   [[0, 0], [-0.2, -6], [0.2, 6], [-0.3, -12], [0.3, 12], [-0.4, -20], [0.4, 20], [-0.95, 0], [0.95, 0]],
 ];
 export const MAX_POWER = PATTERNS.length - 1;
-// 進化需要的累積擊墜數:前面很快(第 1 關就升 Lv.2),後面拉長,Lv.10 大約在第 60 關
-export const EVO_XP = [0, 10, 40, 100, 250, 550, 1000, 1800, 3000, 5000];
+// 進化需要的累積擊墜數:前面很快(第 1 關就升 Lv.2),後面拉長,Lv.10 大約在第 24 關
+export const EVO_XP = [0, 10, 35, 80, 150, 250, 400, 600, 850, 1150];
 // 從檢查點開始時,依關卡給大約應有的進化等級(第 n 關之前能累積的擊墜數)
-const EVO_AT_STAGE = [1, 2, 3, 5, 10, 15, 21, 32, 45, 60];
+const EVO_AT_STAGE = [1, 2, 3, 4, 6, 9, 12, 16, 20, 24];
 const PRAISE = [[5, 'NICE!', 'cyan'], [10, 'GREAT!', 'cyan'], [20, 'EXCELLENT!', 'yellow'], [35, 'AMAZING!', 'yellow'],
   [50, 'UNSTOPPABLE!', 'red'], [75, 'LEGENDARY!', 'red'], [100, 'GODLIKE!', 'red']];
 export const ACH = {
   firstBoss: 'BOSS SLAYER', combo10: 'COMBO x10', combo50: 'COMBO MASTER', evo5: 'RAPTOR PILOT', evo10: 'PHOENIX RISING',
   power: 'MAX POWER', rescue: 'RESCUE HERO', noMiss5: 'NO MISS x5', perfect: 'PERFECT BONUS',
-  stage10: 'STAGE 10', stage25: 'STAGE 25', stage50: 'STAGE 50', stage100: 'LEGEND OF 100',
+  stage10: 'STAGE 10', stage20: 'STAGE 20', stage30: 'ALL 30 CLEAR',
 };
 
 export class Game {
@@ -146,7 +148,7 @@ export class Game {
     // 從後面的關卡(檢查點)開始:直接給對應的進化 / 火力,不然會太痛苦
     if (stageN > 1) {
       P.evo = EVO_AT_STAGE.filter((s) => stageN >= s).length;
-      P.xp = EVO_XP[P.evo - 1]; P.w = Math.min(MAX_POWER, 1 + Math.floor(stageN / 8));
+      P.xp = EVO_XP[P.evo - 1]; P.w = Math.min(MAX_POWER, 1 + Math.floor(stageN / 4));
     }
     this.setShipModels(P.evo);
     this.score = 0;
@@ -177,12 +179,17 @@ export class Game {
     this.chTotal = this.enemies.filter((e) => !e.slot).length;
     this.diveT = 2.5;
     this.st = { deaths: 0, maxCombo: 0, kills: 0 };
+    this.bossQueue = [...cfg.bosses];
+    this.formFireT = 3; this.barrageT = 4; this.meteorT = 2.5;
     this.phase = 'intro'; this.phaseT = 0;
-    this.introDur = first ? 3.6 : 1.9;
-    const title = cfg.kind === 'challenge' ? 'CHALLENGING STAGE' : `STAGE ${this.stageN}`;
-    this.introTitle = title; this.introMsg = first;
+    this.introDur = first ? 3.8 : 2.4;
+    // 開場:關卡編號 + 這關的名字 + 機制提示(每關不一樣,玩家一看就知道這關要注意什麼)
+    const hint = cfg.kind === 'challenge' ? '敵人不會攻擊,盡量全部打下來!' : cfg.twists.map((k) => TWISTS[k].hint).join(' / ');
+    this.introLines = [[`STAGE ${this.stageN}`, 'cyan'], [cfg.name, 'yellow'], ...(hint ? [[hint, 'white hint']] : []),
+      [this.stageN <= MAX_STAGE ? `${this.stageN} / ${MAX_STAGE}` : 'EXTRA', 'white small']];
+    this.introMsg = first;
     if (first) this.h.msg([['PLAYER 1', 'cyan']], 1.5);
-    else this.h.msg([[title, 'cyan'], [this.stageN <= MAX_STAGE ? `${this.stageN} / ${MAX_STAGE}` : 'EXTRA', 'white']], 1.9);
+    else this.h.msg(this.introLines, 2.4);
     this.h.sfx(first ? 'start' : cfg.kind === 'challenge' ? 'challenge' : 'stage');
     this.h.stage(this.stageN);
     this.h.bossBar(null);
@@ -222,7 +229,7 @@ export class Game {
     mdl.root.visible = false;
     this.scene.add(mdl.root);
     const e = {
-      type, slot, mdl, hp: type === 'boss' && this.cfg.kind === 'normal' ? 2 : 1,
+      type, slot, mdl, hp: type === 'boss' && this.cfg.kind === 'normal' ? this.cfg.bossHp || 2 : 1, hazard: false, armored: false,
       state: 'wait', started: false, delay: 0, alive: true, minion: false,
       x: 0, y: TOP_SPAWN, vx: 0, vy: -1, ang: Math.PI, roll: 0, hd: -Math.PI / 2,
       d: 0, path: null, speed: 10, homeSpeed: 10, stream: 0,
@@ -230,6 +237,7 @@ export class Game {
       leader: null, side: 0, escorts: [], escKilled: 0, captive: null, bt: 0,
     };
     if (slot) { const [x, y] = this.slotPos(slot); e.x = x; e.y = y; }
+    if (this.cfg.armored && slot) { e.hp++; e.armored = true; armorize(mdl); } // 裝甲關:多一條命、鋼灰色
     this.enemies.push(e);
     return e;
   }
@@ -304,28 +312,33 @@ export class Game {
 
     switch (this.phase) {
       case 'intro':
-        if (this.introMsg && this.phaseT > 1.5) { this.introMsg = false; this.h.msg([[this.introTitle, 'cyan']], 1.9); }
+        if (this.introMsg && this.phaseT > 1.5) { this.introMsg = false; this.h.msg(this.introLines, 2.3); }
         if (this.phaseT >= this.introDur) { this.phase = 'play'; this.phaseT = 0; }
         break;
       case 'play':
         this.updateWaves();
         this.maybeDive(dt);
+        this.updateTwists(dt);
         this.checkClear();
         break;
       case 'warn':
         if (this.phaseT > 2.0) {
-          this.big = new BigBoss(this, this.cfg);
+          const kind = this.bossQueue.shift();
+          this.big = new BigBoss(this, { ...this.cfg, boss: { kind, hp: this.cfg.boss.hp } });
           this.phase = 'boss'; this.phaseT = 0;
           this.pushBoss();
         }
         break;
       case 'boss':
+        this.updateTwists(dt);
         if (this.big) {
           this.big.update(dt);
           if (this.big.done) {
-            if (this.big.escaped) { this.big.remove(); this.h.feed('GOLDEN SAUCER ESCAPED', 'white'); }
+            const escaped = this.big.escaped;
+            if (escaped) { this.big.remove(); this.h.feed('GOLDEN SAUCER ESCAPED', 'white'); }
             this.big = null; this.h.bossBar(null);
-            if (this.cfg.kind === 'challenge') { this.phase = 'result'; this.phaseT = 0; this.resultStep = 0; }
+            if (!escaped && this.bossQueue.length) this.bossWarn(true); // 連戰:下一隻
+            else if (this.cfg.kind === 'challenge') { this.phase = 'result'; this.phaseT = 0; this.resultStep = 0; }
             else this.startClear();
           }
         }
@@ -354,10 +367,20 @@ export class Game {
   }
 
   checkClear() {
-    if (this.startedWaves < this.waves.length || this.reinfLeft > 0 || this.enemies.length || this.rescue || this.capture) return;
-    this.phase = 'warn'; this.phaseT = 0;
+    if (this.startedWaves < this.waves.length || this.reinfLeft > 0 || this.enemies.some((e) => !e.hazard) || this.rescue || this.capture) return;
+    this.bossWarn(false);
+  }
+
+  /** WARNING → 下一隻 BOSS(next = 連戰的第 2、3 隻) */
+  bossWarn(next) {
+    this.phase = 'warn'; this.phaseT = next ? 0.6 : 0;
     const gold = this.cfg.kind === 'challenge';
-    const info = BOSS_INFO[this.cfg.boss.kind];
+    const info = BOSS_INFO[this.bossQueue[0]];
+    if (next) {
+      this.h.msg([['NEXT BOSS', 'red blink'], [info.name, 'white']], 1.4);
+      this.h.sfx('warning');
+      return;
+    }
     this.h.msg(gold ? [['BONUS TARGET !', 'yellow blink'], [info.name, 'white']] : [['WARNING', 'red blink'], [info.name, 'white']], 2.0);
     this.h.sfx(gold ? 'challenge' : 'warning');
     this.h.vibrate(80);
@@ -397,12 +420,12 @@ export class Game {
     this.h.warp(1.4);
     this.noMissRun = S.deaths === 0 ? this.noMissRun + 1 : 0;
     if (this.noMissRun >= 5) this.achieve('noMiss5');
-    for (const [k, id] of [[10, 'stage10'], [25, 'stage25'], [50, 'stage50'], [100, 'stage100']]) if (n >= k) this.achieve(id);
+    for (const [k, id] of [[10, 'stage10'], [20, 'stage20'], [30, 'stage30']]) if (n >= k) this.achieve(id);
     this.h.progress(n + 1);
   }
 
   nextStage() {
-    if (this.stageN === MAX_STAGE) this.h.feed('ALL 100 STAGES CLEAR !', 'yellow');
+    if (this.stageN === MAX_STAGE) this.h.feed(`ALL ${MAX_STAGE} STAGES CLEAR !`, 'yellow');
     this.stageN++;
     this.beginStage(false);
   }
@@ -427,6 +450,44 @@ export class Game {
     }
   }
 
+  /* ================= 關卡機制(twists) ================= */
+  updateTwists(dt) {
+    const cfg = this.cfg, P = this.player;
+    if (cfg.kind !== 'normal') return;
+    const shooting = P.state === 'play';
+    const form = () => this.enemies.filter((e) => e.state === 'form');
+    if (cfg.formFire && shooting && this.phase === 'play' && (this.formFireT -= dt) <= 0) {
+      // 狙擊手:陣型裡隨機一隻瞄準開火
+      this.formFireT = cfg.formFire * rand(0.7, 1.3);
+      const f = form(); if (f.length) this.fireAt(f[Math.floor(Math.random() * f.length)]);
+    }
+    if (cfg.barrage && shooting && this.phase === 'play' && (this.barrageT -= dt) <= 0) {
+      // 齊射:同一排的幾隻一起往正下方打
+      this.barrageT = cfg.barrage * rand(0.8, 1.2);
+      const f = form();
+      if (f.length) {
+        const row = f[Math.floor(Math.random() * f.length)].slot.row;
+        const v = (cfg.bulletSpeed || 12) * 0.7;
+        f.filter((e) => e.slot.row === row).forEach((e, i) => { if (i % 2 === 0) this.fireBullet(e.x, e.y - 0.5, 0, -v, false); });
+        this.h.sfx('bossShot');
+      }
+    }
+    if (cfg.meteors && (this.meteorT -= dt) <= 0) {
+      this.meteorT = cfg.meteors * rand(0.6, 1.4);
+      this.spawnRock();
+    }
+  }
+
+  /** 隕石:斜斜穿過場地,打 3 下才破,撞到會死 */
+  spawnRock() {
+    const e = this.makeEnemy('rock', null);
+    e.hazard = true; e.hp = 3; e.mdl.root.visible = true;
+    e.path = new Path(meteorPath()); e.d = 0; e.speed = rand(6, 9) * (1 + this.cfg.t * 0.5);
+    e.state = 'fly'; e.path.at(0, e);
+    const s = rand(0.8, 1.35); e.mdl.rig.scale.setScalar(s); e.r = 0.95 * s;
+    e.spin = [rand(-3, 3), rand(-3, 3)];
+  }
+
   /* ================= 陣型 ================= */
   /** 格子的目前位置:進場時整排左右擺,全部到齊後改成「呼吸」(一脹一縮) */
   slotPos(slot) {
@@ -434,7 +495,17 @@ export class Game {
     const sway = Math.sin(F.t * 0.9) * 1.5 * (1 - b);
     const s = 1 + b * 0.12 * (0.5 - 0.5 * Math.cos(F.t * 1.9));
     // 以最上排上方一點為中心縮放(by 是相對最上排的高度)
-    return [slot.bx * s + sway, ROW0 + 1 + (slot.by - 1) * (1 + (s - 1) * 0.8)];
+    const x = slot.bx * s + sway;
+    let y = ROW0 + 1 + (slot.by - 1) * (1 + (s - 1) * 0.8);
+    // 陣型形狀(每關不同):邊緣往下 / V 字 / 倒 V / 會動的波浪
+    const ax = Math.abs(slot.bx);
+    switch (this.cfg.shape) {
+      case 'arch': y -= 0.035 * slot.bx * slot.bx; break;
+      case 'v': y -= 2.5 - 0.3 * ax; break;   // 中間最低 = V
+      case 'peak': y -= 0.3 * ax; break;      // 兩側下垂 = 倒 V
+      case 'wave': y += Math.sin(slot.bx * 0.55 + F.t * 1.6) * 0.9 - 0.6; break;
+    }
+    return [x, y];
   }
 
   /* ================= 出擊 ================= */
@@ -444,14 +515,15 @@ export class Game {
     if (!(this.allEntered || this.startedWaves > cfg.diveFrom)) return;
     this.diveT -= dt;
     if (this.diveT > 0) return;
-    const few = this.enemies.length <= 6;
+    const few = this.enemies.filter((e) => !e.hazard).length <= 6;
     this.diveT = cfg.diveEvery * rand(0.6, 1.3) * (few ? 0.45 : 1);
     const active = this.enemies.filter((e) => ATTACKING.has(e.state)).length;
     if (active >= cfg.maxDivers + (few ? 2 : 0)) return;
     const form = this.enemies.filter((e) => e.state === 'form');
     if (!form.length) return;
     const r = Math.random();
-    let pool = form.filter((e) => e.type === (r < 0.48 ? 'bee' : r < 0.8 ? 'bfly' : 'boss'));
+    const pb = cfg.bossDive || 0.2, pBee = (1 - pb) * 0.6;
+    let pool = form.filter((e) => e.type === (r < pBee ? 'bee' : r < 1 - pb ? 'bfly' : 'boss'));
     if (!pool.length) pool = form;
     // 外側的比較容易先脫隊(原作的感覺)
     const w = pool.map((e) => 1 + Math.abs(e.slot.bx) / 3);
@@ -471,7 +543,7 @@ export class Game {
         this.h.sfx('dive');
         return;
       }
-      this.startDive(e, diveBoss(e.x, e.y, P.x));
+      this.startDive(e, this.snake(diveBoss(e.x, e.y, P.x)));
       e.escorts = []; e.escKilled = 0;
       if (Math.random() < cfg.escort) {
         const c = this.enemies.filter((o) => o.state === 'form' && o.type === 'bfly' && o.slot.row === 1)
@@ -480,19 +552,22 @@ export class Game {
         c.forEach((o, i) => {
           o.state = 'escort'; o.leader = e;
           o.side = c.length === 2 ? (i ? 1 : -1) : (o.slot.bx < e.slot.bx ? -1 : 1);
-          o.shotsLeft = cfg.shots; o.nextShotY = o.y - 3; o.speed = e.speed;
+          o.shotsLeft = cfg.diveShots !== undefined ? cfg.diveShots : cfg.shots; o.nextShotY = o.y - 3; o.speed = e.speed;
           e.escorts.push(o);
         });
       }
-    } else if (e.type === 'bee') this.startDive(e, diveBee(e.x, e.y, P.x, Math.random() < cfg.beeLoop));
-    else this.startDive(e, diveBfly(e.x, e.y, P.x));
+    } else if (e.type === 'bee') this.startDive(e, this.snake(diveBee(e.x, e.y, P.x, Math.random() < cfg.beeLoop)));
+    else this.startDive(e, this.snake(diveBfly(e.x, e.y, P.x)));
     this.h.sfx('dive');
   }
 
+  snake(pts) { return this.cfg.weave ? weave(pts, this.cfg.weave) : pts; }
+
   startDive(e, pts, state = 'dive') {
+    const cfg = this.cfg;
     e.state = state; e.path = new Path(pts); e.d = 0;
-    e.speed = (this.cfg.diveSpeed || 12) * (e.type === 'boss' ? 0.92 : 1);
-    e.shotsLeft = this.cfg.shots || 1; e.nextShotY = e.y - 2.5;
+    e.speed = (cfg.diveSpeed || 12) * (e.type === 'boss' ? 0.92 : 1) * (cfg.diveMul || 1);
+    e.shotsLeft = cfg.diveShots !== undefined ? cfg.diveShots : cfg.shots || 1; e.nextShotY = e.y - 2.5;
   }
 
   toHome(e, hd) {
@@ -579,6 +654,7 @@ export class Game {
     const { root, rig, wings } = e.mdl;
     root.position.set(e.x, e.y, Math.sin(e.flap * 0.35) * 0.12);
     root.rotation.z = e.ang;
+    if (e.hazard) { rig.rotation.x += e.spin[0] * dt; rig.rotation.y += e.spin[1] * dt; return; }
     rig.rotation.y = e.roll;
     // 翅膀:近似方波的兩段式拍動(原作 2 格動畫的味道,但在 3D 裡有過渡)
     const sq = Math.tanh(Math.sin(e.flap) * 3);
@@ -648,11 +724,17 @@ export class Game {
   }
 
   hitEnemy(e, crash = false, dmg = 1) {
-    if (e.type === 'boss' && e.hp > dmg && !crash) {
+    if (e.hp > dmg && !crash) {
       e.hp -= dmg;
-      for (const m of e.mdl.meshes) { const s = BOSS_HIT_SWAP.get(m.material); if (s) m.material = s; }
+      if (e.armored) {
+        // 裝甲被打掉:換回原色
+        e.armored = false; unarmor(e.mdl);
+        this.h.explode(e.x, e.y, COLORS.steel, { n: 8, life: 0.35 });
+      } else if (e.type === 'boss') {
+        for (const m of e.mdl.meshes) { const s = BOSS_HIT_SWAP.get(m.material); if (s) m.material = s; }
+        this.h.explode(e.x, e.y, COLORS.boss, { n: 6, life: 0.35 });
+      } else this.h.explode(e.x, e.y, COLORS[e.type], { n: 5, life: 0.3 });
       this.h.sfx('bossHit');
-      this.h.explode(e.x, e.y, COLORS.boss, { n: 6, life: 0.35 });
       return;
     }
     const moving = e.state !== 'form';
@@ -1053,7 +1135,7 @@ export class Game {
       }
       for (const e of this.enemies) {
         if (!e.alive || e.state === 'wait') continue;
-        const r = HIT_R[e.type], dx = s.x - e.x, dy = s.y - e.y;
+        const r = e.r || HIT_R[e.type], dx = s.x - e.x, dy = s.y - e.y;
         if (dx * dx + dy * dy < r * r) {
           s.on = false; this.stats.hits++;
           this.hitEnemy(e, false, s.dmg);
