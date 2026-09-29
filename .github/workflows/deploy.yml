@@ -57,6 +57,10 @@ jobs:
       - run: npm ci && npm run build
         working-directory: animal-brawl
       - run: cp -r animal-brawl/dist dist/animal-brawl
+
+      - run: npm ci && npm run build
+        working-directory: sengoku
+      - run: cp -r sengoku/dist dist/sengoku
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

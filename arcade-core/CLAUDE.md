@@ -3,7 +3,7 @@
 星際小蜜蜂式 3D 縱向射擊的引擎:陣型 / 俯衝 / 30 關 / 成長系統 / 道具 / BOSS 流程 / HUD / 觸控 / 描線後製。
 **不是獨立專案**(沒有 package.json),由各款遊戲的 Vite 用 alias 引進來一起打包。
 
-用的遊戲:`sky-aces/`、`monkey-king/`、`three-kingdoms/`、`temple-fair/`、`yokai-night/`(第一款直接用引擎做的換皮)、`night-market/`、`animal-brawl/`。
+用的遊戲:`sky-aces/`、`monkey-king/`、`three-kingdoms/`、`temple-fair/`、`yokai-night/`(第一款直接用引擎做的換皮)、`night-market/`、`animal-brawl/`、`sengoku/`。
 `star-bees/` 是最早的原版,**不用** arcade-core(它另外有自己的 repo hyder13/star-bees)。
 
 【2026-09-29 使用者要求「先抽離完全共用」】四款裡一模一樣、或只差文字 / 少數手感參數的程式都搬到這裡;
