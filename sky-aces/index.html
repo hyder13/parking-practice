@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1d5a9e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SKY ACES">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%232f86c8'/%3E%3Cpath d='M7 2h2v11H7zM1 6h14v2H1zM5 12h6v1.5H5z' fill='%23f1f2f8'/%3E%3Crect x='7' y='1' width='2' height='1.5' fill='%23e8322e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<title>SKY ACES 1945</title>
+<style>
+  :root{
+    --bg:#14304f; --red:#ff4a3a; --orange:#ff8a2a; --cyan:#7ff4ff; --blue:#9fc4ff; --white:#f6f6f2; --yellow:#ffd23a;
+    --muted:#b4c4d8; --panel:rgba(10,24,44,.82); --line:#3a5a80;
+    --fs:14px;                                   /* HUD 字級:依場地寬度在 JS 裡設定 */
+    --fl:0px; --fw:100vw; --ft:0px; --fbot:0px;  /* 場地在螢幕上的範圍(JS 投影算出來) */
+    --pix:"Press Start 2P","Courier New",monospace;
+    --cjk:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--white);
+    font-family:var(--pix),var(--cjk);user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none}
+  canvas#view{display:block;position:fixed;inset:0;width:100%;height:100%}
+  .hidden{display:none!important}
+  img.px{image-rendering:pixelated;image-rendering:crisp-edges}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;left:var(--fl);width:var(--fw);top:max(var(--ft),env(safe-area-inset-top));text-shadow:0 2px 0 #14203a,0 0 6px rgba(0,0,0,.6);
+    display:grid;grid-template-columns:1fr 1.25fr 1fr;align-items:start;padding:calc(var(--fs)*.6) calc(var(--fs)*.7) 0;
+    font-size:var(--fs);line-height:1.35;pointer-events:none;z-index:5;text-shadow:0 0 6px rgba(0,0,0,.9)}
+  #hud .lbl{color:var(--red)}
+  #hud .c{text-align:center}
+  #hud .r{text-align:right}
+  #score{color:var(--white)}
+  #hi{color:var(--blue)}
+  .blink{animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  #hudB{position:fixed;left:var(--fl);width:var(--fw);
+    bottom:max(var(--fbot),env(safe-area-inset-bottom));
+    display:flex;justify-content:space-between;align-items:flex-end;padding:0 calc(var(--fs)*.7) calc(var(--fs)*.45);pointer-events:none;z-index:5}
+  #lives img,#badges img{height:calc(var(--fs)*1.45);margin-right:calc(var(--fs)*.25)}
+  #badges img{margin:0 0 0 calc(var(--fs)*.15)}
+  #lives{display:flex;align-items:flex-end;white-space:nowrap}
+  #lives .lx{font-size:calc(var(--fs)*.7);margin-bottom:.2em}
+  .hbtn{pointer-events:auto;font:inherit;font-size:calc(var(--fs)*.8);color:var(--white);background:rgba(10,24,44,.6);
+    border:1px solid var(--line);border-radius:6px;padding:.45em .6em;cursor:pointer;margin-left:.3em}
+  #hudBtns{display:flex;justify-content:flex-end;margin-top:.35em}
+
+  body.title #hud,body.title #hudB,body.title #msg,body.title #status,body.title #bossBar,body.title #combo,body.title #feed,body.title #btnLoop{visibility:hidden}
+  /* 翻筋斗:剩餘次數(底部狀態列)+ 觸控按鈕(右下,另一隻拇指按) */
+  #loops{display:flex;gap:3px;align-items:center;margin-left:4px}
+  #loops::before{content:"LOOP";color:var(--cyan);margin-right:3px}
+  #loops i{display:block;width:calc(var(--fs)*.5);height:calc(var(--fs)*.5);border-radius:50%;border:1px solid var(--cyan)}
+  #loops i.on{background:var(--cyan);box-shadow:0 0 4px var(--cyan)}
+  #btnLoop{position:fixed;z-index:7;right:calc(100vw - var(--fl) - var(--fw) + var(--fs)*.8);
+    bottom:calc(max(var(--fbot),env(safe-area-inset-bottom)) + var(--fs)*3.2);
+    width:calc(var(--fs)*4.4);height:calc(var(--fs)*4.4);min-width:58px;min-height:58px;border-radius:50%;
+    font:inherit;font-size:calc(var(--fs)*.62);color:#fff;background:rgba(20,60,100,.45);border:2px solid rgba(127,244,255,.8);
+    box-shadow:0 0 10px rgba(127,244,255,.35);touch-action:none;opacity:.85}
+  #btnLoop:active{background:rgba(127,244,255,.4)}
+  #btnLoop.empty{opacity:.3;border-color:#8a96a8;box-shadow:none}
+  #stageNo{font-size:calc(var(--fs)*.62);color:var(--muted);margin-top:.5em}
+
+  /* ---------- 戰機狀態(進化經驗條 + 火力格) ---------- */
+  #status{flex:1;min-width:0;margin:0 calc(var(--fs)*.6) calc(var(--fs)*.2);display:grid;grid-template-columns:1fr auto;
+    grid-template-rows:auto auto;gap:calc(var(--fs)*.3) calc(var(--fs)*.5);align-items:center;font-size:calc(var(--fs)*.62)}
+  #status #xp{grid-column:1 / 3}
+  #status .r2{display:flex;align-items:center;gap:4px}
+  #evoName{color:var(--yellow);white-space:nowrap;text-shadow:0 0 6px #000}
+  #xp{height:calc(var(--fs)*.42);background:rgba(255,255,255,.1);border:1px solid rgba(255,210,58,.5);border-radius:2px;overflow:hidden}
+  #xpFill{height:100%;width:0;background:linear-gradient(90deg,#ff8a2a,#ffd23a);transition:width .25s}
+  #pwr{display:flex;gap:2px;align-items:center}
+  #pwr i{display:block;width:calc(var(--fs)*.45);height:calc(var(--fs)*.7);background:rgba(255,255,255,.12);border-radius:1px}
+  #pwr i.on{background:var(--red);box-shadow:0 0 4px var(--red)}
+  #pwr b{margin-left:3px;font-weight:400}
+  .green{color:#5aff8a}
+
+  /* ---------- BOSS 血條 ---------- */
+  #bossBar{position:fixed;left:var(--fl);width:var(--fw);top:calc(max(var(--ft),env(safe-area-inset-top)) + var(--fs)*3.4);
+    padding:0 calc(var(--fs)*1.2);pointer-events:none;z-index:5;font-size:calc(var(--fs)*.62);text-align:center}
+  #bossName{color:var(--red);margin-bottom:.4em;text-shadow:0 0 6px #000}
+  #bossHp{height:calc(var(--fs)*.55);border:1px solid rgba(255,74,58,.7);background:rgba(40,0,10,.6);border-radius:2px;overflow:hidden}
+  #bossFill{height:100%;width:100%;background:linear-gradient(90deg,#ff3a3a,#ff8a2a);transition:width .12s}
+  #bossBar.gold #bossName{color:var(--yellow)} #bossBar.gold #bossFill{background:linear-gradient(90deg,#ffd23a,#fff2a0)}
+
+  /* ---------- 連擊 / 誇獎 / 通知 / 閃光 ---------- */
+  #combo{position:fixed;transform:translate(-100%,-50%);text-align:right;pointer-events:none;z-index:6;opacity:0;transition:opacity .2s;
+    text-shadow:0 0 8px #000}
+  #combo.on{opacity:1}
+  #combo b{display:block;font-weight:400;font-size:calc(var(--fs)*1.7);color:var(--white)}
+  #combo span{font-size:calc(var(--fs)*.6);color:var(--cyan)}
+  #combo.hot b{color:var(--yellow)}
+  #combo span.cyan,#combo b.cyan{color:var(--cyan)} #combo span.yellow,#combo b.yellow{color:var(--yellow)} #combo span.red{color:var(--red)}
+  #combo.mile span{font-size:calc(var(--fs)*.8)}
+  #combo.pop b{animation:cpop .18s ease-out}
+  @keyframes cpop{from{transform:scale(1.5)}to{transform:scale(1)}}
+  #combo.mile b{animation:cmile .45s ease-out}
+  #combo.mile span{display:inline-block;animation:cword 1s ease-out}
+  @keyframes cmile{0%{transform:scale(2)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+  @keyframes cword{0%{transform:scale(1.8);filter:brightness(2)}100%{transform:scale(1)}}
+  /* 左上角側欄:成就 / 少數系統通知,滑進來再滑出去 */
+  #feed{position:fixed;left:var(--fl);top:calc(max(var(--ft),env(safe-area-inset-top)) + var(--fs)*5.3);
+    padding-left:calc(var(--fs)*.7);display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;z-index:8}
+  .feed{font-size:calc(var(--fs)*.55);padding:.45em .8em .45em .6em;background:rgba(10,8,28,.6);border-left:3px solid currentColor;
+    border-radius:0 4px 4px 0;white-space:nowrap;animation:feed 3.2s ease-out forwards}
+  @keyframes feed{0%{opacity:0;transform:translateX(-24px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateX(-12px)}}
+  /* 戰機頭上的小標籤(道具 / 進化) */
+  .pop.tag{font-size:calc(var(--fs)*.62);padding:.25em .5em;background:rgba(10,8,28,.55);border-radius:3px}
+  #pwr.bump i.on{animation:pip .5s ease-out}
+  @keyframes pip{0%{transform:scaleY(1.8);filter:brightness(2.2)}100%{transform:none}}
+  #status.glow #evoName{animation:evo 1.6s ease-out}
+  #status.glow #xp{animation:evobar 1.6s ease-out}
+  @keyframes evo{0%,30%{color:#fff;text-shadow:0 0 10px #ffd23a,0 0 20px #ff8a2a}100%{text-shadow:0 0 6px #000}}
+  @keyframes evobar{0%,30%{box-shadow:0 0 12px #ffd23a;border-color:#fff}100%{box-shadow:none}}
+  #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9}
+  .stars{font-size:1.5em;letter-spacing:.2em;font-family:var(--cjk)}
+  @media (prefers-reduced-motion:reduce){.feed,#combo.pop b,#combo.mile b,#combo.mile span,#pwr.bump i.on,#status.glow *{animation-duration:.01s}}
+
+  /* ---------- 中央訊息 / 得分跳字 ---------- */
+  #msg{position:fixed;left:var(--fl);width:var(--fw);top:0;transform:translateY(-50%);text-align:center;
+    font-size:calc(var(--fs)*1.05);line-height:2.1;pointer-events:none;z-index:6;text-shadow:0 0 10px rgba(0,0,0,.95)}
+  #msg .hint{font-family:var(--cjk);font-weight:700;font-size:.78em;line-height:1.6;margin:.3em 0 .5em}
+  #msg .small{font-size:.6em;margin:0;color:var(--muted)}
+  .red{color:var(--red)} .cyan{color:var(--cyan)} .white{color:var(--white)} .yellow{color:var(--yellow)} .blue{color:var(--blue)}
+  .pop{position:fixed;left:0;top:0;font-size:calc(var(--fs)*.85);pointer-events:none;z-index:6;white-space:nowrap;
+    text-shadow:0 0 6px #000;will-change:transform}
+
+  /* ---------- 覆蓋畫面 ---------- */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;
+    padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    background:radial-gradient(ellipse at 50% 45%,rgba(8,24,48,.45),rgba(8,20,40,.82))}
+  .card{width:min(460px,100%);max-height:100%;overflow:auto;text-align:center;touch-action:pan-y}
+  .logo{font-size:clamp(30px,11vw,52px);line-height:1.15;letter-spacing:.04em;margin:.2em 0 .15em;
+    background:linear-gradient(#fff6c8 0%,#ffd23a 40%,#ff8a2a 75%,#e8322e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 0 #14203a) drop-shadow(0 0 14px rgba(255,200,90,.35))}
+  .year{font-size:clamp(14px,5vw,22px);letter-spacing:.5em;color:var(--white);margin:.2em 0 .3em;text-shadow:0 3px 0 #14203a}
+  .sub{font-family:var(--cjk);font-weight:800;font-size:16px;letter-spacing:.3em;color:var(--cyan);margin-bottom:18px}
+  .start{display:inline-block;font:inherit;font-size:18px;color:var(--white);background:none;border:0;padding:14px 18px;cursor:pointer}
+  .table{display:grid;grid-template-columns:auto auto auto;gap:10px 14px;justify-content:center;align-items:center;
+    margin:16px auto 6px;font-size:11px;color:var(--white)}
+  .table img{height:22px}
+  .table .h{font-family:var(--cjk);font-size:12px;color:var(--muted)}
+  .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 0}
+  .sbtn{font:inherit;font-size:12px;color:var(--white);background:rgba(10,28,52,.8);border:1px solid var(--line);border-radius:6px;
+    padding:9px 11px;cursor:pointer;min-width:40px}
+  .sbtn.sel{border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 0 1px var(--yellow) inset}
+  .hint{font-family:var(--cjk);font-size:13px;line-height:1.7;color:#d8e4f2;margin-top:16px}
+  .hint b{color:var(--yellow);font-weight:700}
+  .small{font-size:10px;color:var(--muted);margin-top:14px;line-height:1.8}
+  .res{font-size:13px;line-height:2.3;margin:18px 0}
+  .res div{display:flex;justify-content:space-between;gap:1em;max-width:340px;margin:0 auto}
+  .res span{text-align:right;font-variant-numeric:tabular-nums}
+  .table.items{grid-template-columns:repeat(6,auto);gap:8px 10px;font-size:13px}
+  .sbtn.locked{opacity:.45}
+  #stageSel{max-width:340px;margin-inline:auto}
+
+  /* ---------- CRT 掃描線(可關) ---------- */
+  #crt{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.22;mix-blend-mode:multiply;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.9) 3px,rgba(0,0,0,0) 4px)}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 CADET</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="loop">LOOP</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="logo">SKY<br>ACES</div>
+    <div class="year">1945</div>
+    <div class="sub">蒼空王牌 3D</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="heavy fighter"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="dive bomber"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="fighter"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">火力</span><span class="cyan">R</span><span class="h">連射</span><span class="green">S</span><span class="h">護盾</span>
+      <span style="color:#c77dff">B</span><span class="h">空襲</span><span style="color:#6a9fff">W</span><span class="h">僚機</span><span class="yellow">1UP</span><span class="h">加命</span>
+    </div>
+    <div class="small">30 MISSIONS · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">CRT ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">MISSION <span class="white" id="rStage">1</span></div>
+      <div class="yellow">RANK <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -12,6 +12,8 @@
   自動部署 GitHub Pages:https://hyder13.github.io/parking-practice/(`vite.config.js` base './' 不可拿掉)。
 - 同一個 repo 的 `star-bees/` 是另一款遊戲(星際小蜜蜂 3D,獨立 Vite 專案,見 star-bees/CLAUDE.md),
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/star-bees/。
+- 同一個 repo 的 `sky-aces/` 是星際小蜜蜂換皮成二戰空戰的版本(蒼空王牌 1945,見 sky-aces/CLAUDE.md),
+  deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/sky-aces/。
 
 ## 授權邊界
 - 【使用者授權 2026-09-28】本專案 `git push` 到 origin main(= 自動部署 GitHub Pages 公開網站)不用再問;
