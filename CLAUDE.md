@@ -10,6 +10,10 @@
   新增視覺元素一律用 `cel()` / `flat()`(src/core/toon.js),顏色一律取 `PAL`(src/core/palette.js)。
 - git:公開庫 https://github.com/hyder13/parking-practice(main)。push main → `.github/workflows/deploy.yml`
   自動部署 GitHub Pages:https://hyder13.github.io/parking-practice/(`vite.config.js` base './' 不可拿掉)。
+- 整站 build = `bash scripts/build-all.sh`(根目錄 + 每款遊戲 build 完放進 dist/<資料夾>/;新增一款要加進腳本的 `GAMES`)。
+  GitHub Actions 和 Cloudflare Pages 都用這支。
+  【2026-09-30 使用者決定】repo 要改成 private(免費帳號 → GitHub Pages 會停),網站搬到 Cloudflare Pages
+  (build 指令 `bash scripts/build-all.sh`、輸出 `dist`、Node 版本看 `.node-version`)。搬完前 GitHub Pages 照舊。
 - 同一個 repo 的 `star-bees/` 是另一款遊戲(星際小蜜蜂 3D,獨立 Vite 專案,見 star-bees/CLAUDE.md),
   deploy.yml 會一起 build 並放到 https://hyder13.github.io/parking-practice/star-bees/。
   【2026-09-29 使用者決定】這份跟獨立 repo hyder13/star-bees 重複,但**保留、不刪**。
