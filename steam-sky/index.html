@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1e140c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="蒸汽天空">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231e140c'/%3E%3Ccircle cx='8' cy='8' r='5.5' fill='%23e8b84a' stroke='%23e8b84a' stroke-width='3' stroke-dasharray='2 1.6'/%3E%3Ccircle cx='8' cy='8' r='2' fill='%231e140c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<title>蒸汽天空 STEAM SKY</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import,比這裡晚載入 → 這裡的選擇器都加 html 提高優先權);這裡只放這款的蒸汽龐克樣式 */
+  html:root{--loop-label:"噴";--loop-fs:1.25;--loop-bg:rgba(200,144,42,.5);
+    --red:#ff6a4a;--cyan:#9ae8f0;--yellow:#ffc850;--white:#fff4e0;--bg:#1e140c;--line:#e8b84a}
+  html #crt{display:none!important} /* 蒸汽 / 黃銅框在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  html #btnLoop{border:3px solid #e8b84a;box-shadow:0 0 0 3px #5a3a14,0 0 12px rgba(232,184,74,.4)}
+  html .overlay{background:radial-gradient(ellipse at 50% 40%,rgba(30,20,12,.35),rgba(30,20,12,.9))}
+  /* 標題:一個會慢慢轉的大黃銅齒輪,上面寫著字 */
+  html .cog{position:relative;width:min(290px,74vw,42vh);aspect-ratio:1;margin:0 auto .3em}
+  html .cog::before{content:"";position:absolute;inset:0;border-radius:50%;
+    background:
+      radial-gradient(circle,#1e140c 0 30%,transparent 30.5% 62%,#5a3a14 62% 64%,transparent 64%),
+      radial-gradient(circle at 35% 30%,#ffe7a0,#e8b84a 30%,#a8701e 70%,#5a3a14);
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M89.9 47.2 L97.9 47.7 L97.9 52.3 L89.9 52.8 L87.9 62.7 L95.2 66.3 L93.4 70.4 L85.8 67.9 L80.2 76.2 L85.5 82.3 L82.3 85.5 L76.2 80.2 L67.9 85.8 L70.4 93.4 L66.3 95.2 L62.7 87.9 L52.8 89.9 L52.3 97.9 L47.7 97.9 L47.2 89.9 L37.3 87.9 L33.7 95.2 L29.6 93.4 L32.1 85.8 L23.8 80.2 L17.7 85.5 L14.5 82.3 L19.8 76.2 L14.2 67.9 L6.6 70.4 L4.8 66.3 L12.1 62.7 L10.1 52.8 L2.1 52.3 L2.1 47.7 L10.1 47.2 L12.1 37.3 L4.8 33.7 L6.6 29.6 L14.2 32.1 L19.8 23.8 L14.5 17.7 L17.7 14.5 L23.8 19.8 L32.1 14.2 L29.6 6.6 L33.7 4.8 L37.3 12.1 L47.2 10.1 L47.7 2.1 L52.3 2.1 L52.8 10.1 L62.7 12.1 L66.3 4.8 L70.4 6.6 L67.9 14.2 L76.2 19.8 L82.3 14.5 L85.5 17.7 L80.2 23.8 L85.8 32.1 L93.4 29.6 L95.2 33.7 L87.9 37.3Z'/%3E%3C/svg%3E") center/100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M89.9 47.2 L97.9 47.7 L97.9 52.3 L89.9 52.8 L87.9 62.7 L95.2 66.3 L93.4 70.4 L85.8 67.9 L80.2 76.2 L85.5 82.3 L82.3 85.5 L76.2 80.2 L67.9 85.8 L70.4 93.4 L66.3 95.2 L62.7 87.9 L52.8 89.9 L52.3 97.9 L47.7 97.9 L47.2 89.9 L37.3 87.9 L33.7 95.2 L29.6 93.4 L32.1 85.8 L23.8 80.2 L17.7 85.5 L14.5 82.3 L19.8 76.2 L14.2 67.9 L6.6 70.4 L4.8 66.3 L12.1 62.7 L10.1 52.8 L2.1 52.3 L2.1 47.7 L10.1 47.2 L12.1 37.3 L4.8 33.7 L6.6 29.6 L14.2 32.1 L19.8 23.8 L14.5 17.7 L17.7 14.5 L23.8 19.8 L32.1 14.2 L29.6 6.6 L33.7 4.8 L37.3 12.1 L47.2 10.1 L47.7 2.1 L52.3 2.1 L52.8 10.1 L62.7 12.1 L66.3 4.8 L70.4 6.6 L67.9 14.2 L76.2 19.8 L82.3 14.5 L85.5 17.7 L80.2 23.8 L85.8 32.1 L93.4 29.6 L95.2 33.7 L87.9 37.3Z'/%3E%3C/svg%3E") center/100% no-repeat;
+    animation:cogspin 24s linear infinite;box-shadow:0 0 30px rgba(232,184,74,.3)}
+  @keyframes cogspin{to{transform:rotate(360deg)}}
+  html .cog .logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;z-index:1}
+  html #title .logo.big{font-family:var(--cjk);font-weight:900;font-size:clamp(34px,11vw,58px);letter-spacing:.06em;
+    background:none;color:#ffe7a0;-webkit-text-stroke:2px #1e140c;paint-order:stroke fill;
+    text-shadow:0 3px 0 #1e140c,0 0 12px rgba(30,20,12,.95);filter:none;margin:0}
+  html #title .year{font-family:"IM Fell English SC",Georgia,serif;letter-spacing:.14em;color:#e8b84a;text-shadow:0 2px 0 #1e140c}
+  html #title .sub{color:#9ae8f0}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 見習飛行員</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="噴">噴</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="cog"><div class="logo big">蒸汽天空</div></div>
+    <div class="year">STEAM SKY</div>
+    <div class="sub">小飛行員 · 蒸汽之國三十航段</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="蒸汽機器人"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="發條蜻蜓"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="發條兵"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">火力</span><span class="cyan">R</span><span class="h">連發</span><span class="green">S</span><span class="h">護盾</span>
+      <span style="color:#c77dff">B</span><span class="h">蒸汽炸彈</span><span style="color:#f0e8d8">W</span><span class="h">機械貓頭鷹</span><span class="yellow">1UP</span><span class="h">紅茶</span>
+    </div>
+    <div class="small">三十航段 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">蒸汽 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾航段 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">飛行員階級 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

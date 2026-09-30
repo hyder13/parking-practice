@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#14100c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小法老">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314100c'/%3E%3Ccircle cx='8' cy='5' r='3' fill='%23c83a1a'/%3E%3Cpath d='M8 4 15 15H1z' fill='%23e8b830' stroke='%2314100c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Cinzel+Decorative:wght@900&display=swap" rel="stylesheet">
+<title>小法老 LITTLE PHARAOH</title>
+<style>
+  /* 共用版面在 arcade-core/ui/hud.css(src/main.js import,比這裡晚載入 → 這裡的選擇器都加 html 提高優先權);這裡只放這款的壁畫樣式 */
+  html:root{--loop-label:"沙";--loop-fs:1.25;--loop-bg:rgba(42,90,184,.55);
+    --red:#e8502a;--cyan:#5ad8c8;--yellow:#f0c040;--white:#fff8e8;--bg:#14100c;--line:#e8b830}
+  html #crt{display:none!important} /* 莎草紙紋 / 壁畫邊框在 shader 裡(skin.js LOOK.style),不用共用的紙紋 */
+  html #btnLoop{border:3px solid #e8b830;box-shadow:0 0 0 3px #14100c,0 0 12px rgba(232,184,48,.4)}
+  html .overlay{background:radial-gradient(ellipse at 50% 40%,rgba(20,16,12,.3),rgba(20,16,12,.88))}
+  /* 標題:金字塔(一層層的金色條紋)+ 後面的紅太陽 */
+  html .pyr{position:relative;width:min(300px,76vw,44vh);aspect-ratio:1.15;margin:0 auto .3em}
+  html .pyr::before{content:"";position:absolute;left:50%;top:0;width:44%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+    background:#c83a1a;box-shadow:0 0 0 5px #e8b830,0 0 0 8px #14100c,0 0 30px rgba(232,184,48,.5)}
+  html .pyr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:72%;
+    clip-path:polygon(50% 0,100% 100%,0 100%);
+    background:repeating-linear-gradient(180deg,#e8b830 0 16%,#c8902a 16% 18%,#2a5ab8 18% 22%,#14100c 22% 23%);
+    filter:drop-shadow(0 0 2px #14100c)}
+  html .pyr .logo{position:absolute;left:50%;top:66%;transform:translate(-50%,-50%);white-space:nowrap;z-index:1}
+  html #title .logo.big{font-family:var(--cjk);font-weight:900;font-size:clamp(34px,11vw,58px);letter-spacing:.06em;
+    background:none;color:#fff8e8;-webkit-text-stroke:2px #14100c;paint-order:stroke fill;
+    text-shadow:0 3px 0 #14100c,0 0 12px rgba(20,16,12,.95);filter:none;margin:0}
+  html #title .year{font-family:"Cinzel Decorative",Georgia,serif;font-weight:900;letter-spacing:.14em;color:#e8b830;text-shadow:0 2px 0 #14100c}
+  html #title .sub{color:#5ad8c8}
+</style>
+</head>
+<body class="title">
+<canvas id="view"></canvas>
+<div id="crt"></div>
+
+<div id="hud">
+  <div><div class="lbl blink" id="oneup">1UP</div><div id="score">00</div></div>
+  <div class="c"><div class="lbl">HI-SCORE</div><div id="hi">20000</div></div>
+  <div class="r"><div id="hudBtns"><button class="hbtn" id="btnMute" aria-label="sound">♪</button><button class="hbtn" id="btnPause" aria-label="pause">II</button></div><div id="stageNo"></div></div>
+</div>
+<div id="bossBar" class="hidden"><div id="bossName"></div><div id="bossHp"><div id="bossFill"></div></div></div>
+<div id="hudB"><div id="lives"></div>
+  <div id="status"><span id="evoName">Lv.1 小王子</span><div class="r2"><div id="pwr"></div><div id="loops"></div></div><div id="xp"><div id="xpFill"></div></div></div>
+  <div id="badges"></div></div>
+<div id="msg"></div>
+<button id="btnLoop" aria-label="沙">沙</button>
+<div id="combo"></div>
+<div id="feed"></div>
+<div id="flash"></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="pyr"><div class="logo big">小法老</div></div>
+    <div class="year">LITTLE PHARAOH</div>
+    <div class="sub">小法老 · 尼羅河三十關</div>
+    <button class="start blink" id="btnStart">TAP TO START</button>
+    <div class="table">
+      <span></span><span class="h">編隊中</span><span class="h">俯衝中</span>
+      <img class="px" id="sBoss" alt="胡狼守衛"><span class="yellow">150</span><span class="yellow">400-1600</span>
+      <img class="px" id="sBfly" alt="聖甲蟲"><span>80</span><span>160</span>
+      <img class="px" id="sBee" alt="木乃伊"><span>50</span><span>100</span>
+    </div>
+    <div class="table items">
+      <span class="red">P</span><span class="h">太陽之力</span><span class="cyan">R</span><span class="h">疾風</span><span class="green">S</span><span class="h">護身符</span>
+      <span style="color:#6a9aff">B</span><span class="h">沙暴</span><span style="color:#f4ecd8">W</span><span class="h">聖貓</span><span class="yellow">1UP</span><span class="h">椰棗</span>
+    </div>
+    <div class="small">尼羅河三十關 · BEST <span id="bestStage">1</span> · 選關(測試用全部開放)</div>
+    <div class="row" id="stageSel"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row"><button class="sbtn" id="btnSnd">SOUND ON</button><button class="sbtn" id="btnCrt">壁畫 ON</button></div>
+    <div class="small">HI-SCORE <span id="tHi">20000</span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:34px">PAUSE</div>
+    <div class="row"><button class="sbtn" id="btnResume">RESUME</button><button class="sbtn" id="btnQuit">QUIT</button></div>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="logo" style="font-size:30px">RESULTS</div>
+    <div class="res">
+      <div class="red">SCORE <span class="white" id="rScore">0</span></div>
+      <div class="red">第幾關 <span class="white" id="rStage">1</span></div>
+      <div class="yellow">法老階級 <span class="white" id="rEvo">Lv.1</span></div>
+      <div class="yellow">MAX COMBO <span class="white" id="rCombo">0</span></div>
+      <div class="yellow">ENEMIES DOWN <span class="white" id="rKills">0</span></div>
+      <div class="yellow">SHOTS FIRED <span class="white" id="rShots">0</span></div>
+      <div class="yellow">NUMBER OF HITS <span class="white" id="rHits">0</span></div>
+      <div class="cyan">HIT-MISS RATIO <span class="white" id="rRatio">0 %</span></div>
+    </div>
+    <button class="start blink" id="btnAgain">TAP TO CONTINUE</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

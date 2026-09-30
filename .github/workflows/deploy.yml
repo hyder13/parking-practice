@@ -82,6 +82,14 @@ jobs:
         working-directory: stained-glass
       - run: cp -r stained-glass/dist dist/stained-glass
 
+      - run: npm ci && npm run build
+        working-directory: steam-sky
+      - run: cp -r steam-sky/dist dist/steam-sky
+
+      - run: npm ci && npm run build
+        working-directory: pharaoh
+      - run: cp -r pharaoh/dist dist/pharaoh
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
